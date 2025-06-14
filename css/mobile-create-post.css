@@ -1,0 +1,50 @@
+.mobile-create-post {
+    display: none ;
+    position: fixed;
+    bottom: 70px; /* Position above mobile navbar */
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--accent-primary);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 1000;
+    transition: transform 0.2s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (min-width: 769px){
+    .mobile-create-post {
+        display: none !important; /* Hide on larger screens */
+    }
+}
+
+.mobile-create-post:hover {
+    transform: scale(1.05);
+    color: white;
+    text-decoration: none;
+}
+
+.mobile-create-post i {
+    font-size: 24px;
+}
+
+/* Hide create post section on mobile */
+@media (max-width: 768px) {
+    .mobile-create-post {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Hide the compose box on mobile */
+    .compose-box {
+        display: none !important;
+    }
+} 

@@ -1,0 +1,35 @@
+  /* Mobile bottom navigation */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--background-secondary);
+            border-top: 1px solid var(--border-primary);
+            z-index: 1000;
+        }
+
+        @media (max-width: 767px) {
+            .mobile-nav {
+                display: flex;
+                justify-content: space-around;
+                padding: 0.5rem 0;
+            }
+
+            .mobile-nav .nav-link {
+                color: var(--text-secondary);
+                text-align: center;
+                padding: 0.5rem;
+            }
+
+            .mobile-nav .nav-link.active {
+                color: var(--accent-primary);
+            }
+
+            .mobile-nav .nav-link i {
+                font-size: 1.25rem;
+                display: block;
+                margin-bottom: 0.25rem;
+            }
+        }

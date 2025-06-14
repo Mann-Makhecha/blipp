@@ -1,0 +1,208 @@
+:root {
+            /* Dark Mode Color Palette */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --bg-hover: #3a3a3a;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --text-white: #808080;
+            --accent-primary: #1d9bf0;
+            --accent-secondary: #7c3aed;
+            --accent-success: #00ba7c;
+            --accent-danger: #f91880;
+            --accent-warning: #ffd700;
+            --border-color: #333333;
+            --shadow-light: rgba(255, 255, 255, 0.1);
+            --shadow-dark: rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            border-left: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            width: 350px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--bg-tertiary) transparent;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+
+        .sidebar-brand {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            background-color: var(--bg-tertiary) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-primary) !important;
+            padding-left: 2.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--accent-primary) !important;
+            box-shadow: 0 0 0 0.2rem rgba(29, 155, 240, 0.25) !important;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-white);
+            z-index: 10;
+        }
+
+        .premium-card {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .premium-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            pointer-events: none;
+        }
+
+        .trend-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .trend-card:hover {
+            background-color: var(--bg-tertiary);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow-dark);
+        }
+
+        .trend-item {
+            background-color: transparent !important;
+            border: none !important;
+            color: var(--text-primary) !important;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .trend-item:hover {
+            background-color: var(--bg-hover) !important;
+            border-radius: 8px;
+        }
+
+        .trend-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 0.5rem;
+        }
+
+        .badge-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
+        }
+
+        .badge-success {
+            background-color: var(--accent-success) !important;
+        }
+
+        .badge-danger {
+            background-color: var(--accent-danger) !important;
+        }
+
+        .badge-warning {
+            background-color: var(--accent-warning) !important;
+            color: var(--bg-primary) !important;
+        }
+
+        .hot-topic {
+            background-color: var(--bg-tertiary);
+            border-left: 3px solid var(--accent-danger);
+            transition: all 0.2s ease;
+        }
+
+        .hot-topic:hover {
+            background-color: var(--bg-hover);
+            border-left-color: var(--accent-primary);
+        }
+
+        .section-title {
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats-text {
+            font-size: 0.8rem;
+            color: var(--text-white);
+        }
+
+        .trend-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .community-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .community-link:hover {
+            color: var(--accent-secondary);
+        }
+
+        .hashtag-link {
+            color: var(--accent-danger);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .hashtag-link:hover {
+            color: var(--accent-warning);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+            }
+        }
