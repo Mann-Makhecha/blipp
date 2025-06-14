@@ -174,7 +174,7 @@
     <!-- Header -->
     <header class="admin-header">
         <div>
-            <h5 class="mb-0">Welcome, <?= htmlspecialchars($admin['username']) ?></h5>
+            <h5 class="mb-0">Welcome, <?= htmlspecialchars($admin['username'] ?? 'Admin') ?></h5>
         </div>
         <div class="admin-dropdown">
             <button class="btn btn-link text-white dropdown-toggle" type="button" data-bs-toggle="dropdown">

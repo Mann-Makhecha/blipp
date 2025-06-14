@@ -8,15 +8,9 @@
 </head>
 <body>
     <?php
-session_start();
 require_once '../includes/db.php';
+require_once 'includes/auth.php';
 require_once '../includes/settings.php';
-
-// Check if user is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../login.php');
-    exit();
-}
 
 $success = '';
 $error = '';
@@ -68,7 +62,6 @@ while ($row = $result->fetch_assoc()) {
     $settings[$row['setting_key']] = $row['setting_value'];
 }
 
-// Include header after all potential redirects and before any output
 require_once 'includes/header.php';
 ?>
 

@@ -1,6 +1,15 @@
 <?php
+header('Content-Type: application/json');
+
 require_once '../includes/db.php';
 require_once 'includes/auth.php';
+
+// Check if database connection is valid and $mysqli is an object
+if (!$mysqli || $mysqli->connect_error) {
+    error_log("admin/get_post.php: Database connection failed. Error: " . ($mysqli->connect_error ?? "Unknown error"));
+    echo json_encode(['success' => false, 'message' => 'Database connection error. Please try again later.']);
+    exit();
+}
 
 // Get post ID
 $post_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -22,8 +31,23 @@ $stmt = $mysqli->prepare("
     LEFT JOIN communities c ON p.community_id = c.community_id
     WHERE p.post_id = ?
 ");
+
+// Check if statement preparation failed
+if (!$stmt) {
+    error_log("admin/get_post.php: Failed to prepare post query: " . $mysqli->error);
+    echo json_encode(['success' => false, 'message' => 'Failed to retrieve post data.']);
+    exit();
+}
+
 $stmt->bind_param("i", $post_id);
-$stmt->execute();
+
+// Check if execution failed
+if (!$stmt->execute()) {
+    error_log("admin/get_post.php: Failed to execute post query: " . $stmt->error);
+    echo json_encode(['success' => false, 'message' => 'Failed to retrieve post data.']);
+    exit();
+}
+
 $result = $stmt->get_result();
 
 if ($post = $result->fetch_assoc()) {
@@ -33,8 +57,23 @@ if ($post = $result->fetch_assoc()) {
         FROM files
         WHERE post_id = ?
     ");
+
+    // Check if files statement preparation failed
+    if (!$files_stmt) {
+        error_log("admin/get_post.php: Failed to prepare files query: " . $mysqli->error);
+        echo json_encode(['success' => false, 'message' => 'Failed to retrieve file data.']);
+        exit();
+    }
+
     $files_stmt->bind_param("i", $post_id);
-    $files_stmt->execute();
+    
+    // Check if files execution failed
+    if (!$files_stmt->execute()) {
+        error_log("admin/get_post.php: Failed to execute files query: " . $files_stmt->error);
+        echo json_encode(['success' => false, 'message' => 'Failed to retrieve file data.']);
+        exit();
+    }
+
     $files_result = $files_stmt->get_result();
     
     $files = [];

@@ -1,5 +1,5 @@
 <?php
-require_once 'includes/header.php';
+require_once 'includes/auth.php';
 
 // Get post ID from URL
 $post_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -62,6 +62,9 @@ $reports = $mysqli->query("
     WHERE r.post_id = $post_id
     ORDER BY r.created_at DESC
 ");
+
+// Include header after all processing is done
+require_once 'includes/header.php';
 ?>
 
 <div class="container-fluid">
@@ -122,10 +125,19 @@ $reports = $mysqli->query("
                                         <div class="col-md-4">
                                             <div class="card">
                                                 <?php if (strpos($file['file_type'], 'image/') === 0): ?>
-                                                    <img src="<?= htmlspecialchars($file['file_path']) ?>" 
+                                                    <?php
+                                                    // Ensure the image URL is properly formatted
+                                                    $image_url = $file['file_path'];
+                                                    if (strpos($image_url, 'http') !== 0) {
+                                                        // If it's a relative path, make it absolute
+                                                        $image_url = '../' . ltrim($image_url, '/');
+                                                    }
+                                                    ?>
+                                                    <img src="<?= htmlspecialchars($image_url) ?>" 
                                                          class="card-img-top" 
                                                          alt="Post Image"
-                                                         style="height: 200px; object-fit: cover;">
+                                                         style="height: 200px; object-fit: cover;"
+                                                         onerror="this.onerror=null; this.src='../assets/images/placeholder.png';">
                                                 <?php else: ?>
                                                     <div class="card-body text-center">
                                                         <i class="fas fa-file fa-3x text-gray-300"></i>

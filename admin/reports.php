@@ -1,22 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blipp - report</title>
-    <link rel="icon" href="../favicon (2).png" type="image/x-icon">
-</head>
-<body>
-    <?php
+<?php
 session_start();
 require_once '../includes/db.php';
-require_once 'includes/header.php';
-
-// Check if user is logged in and is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../login.php");
-    exit();
-}
+require_once 'includes/auth.php';
 
 // Handle report actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -67,12 +52,7 @@ $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $post_id_filter = isset($_GET['post_id']) ? (int)$_GET['post_id'] : 0;
 
 // Build query
-$query = "SELECT pr.*, p.content as post_content, u.username as reporter_username,
-    (SELECT COUNT(*) FROM post_reports WHERE post_id = p.post_id) as total_reports
-    FROM post_reports pr
-    JOIN posts p ON pr.post_id = p.post_id
-    JOIN users u ON pr.reporter_id = u.user_id
-    WHERE 1=1";
+$query = "SELECT pr.*, p.content as post_content, u.username as reporter_username,\n    (SELECT COUNT(*) FROM post_reports WHERE post_id = p.post_id) as total_reports\n    FROM post_reports pr\n    JOIN posts p ON pr.post_id = p.post_id\n    JOIN users u ON pr.reporter_id = u.user_id\n    WHERE 1=1";
 $params = [];
 $types = "";
 
@@ -106,6 +86,7 @@ if (!empty($params)) {
 $stmt->execute();
 $reports = $stmt->get_result();
 ?>
+<?php require_once 'includes/header.php'; ?>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -198,17 +179,17 @@ $reports = $stmt->get_result();
                                                     <form method="POST" class="d-inline">
                                                         <input type="hidden" name="report_id" value="<?= $report['report_id'] ?>">
                                                         <input type="hidden" name="action" value="resolve">
-                                                        <button type="submit" class="dropdown-item">
-                                                            <i class="fas fa-check"></i> Mark as Resolved
+                                                        <button type="submit" class="dropdown-item text-success" onclick="return confirm('Are you sure you want to dismiss this report?')">
+                                                            <i class="fas fa-check"></i> Dismiss Report
                                                         </button>
                                                     </form>
                                                 </li>
                                                 <li>
-                                                    <form method="POST" class="d-inline delete-confirm">
+                                                    <form method="POST" class="d-inline">
                                                         <input type="hidden" name="report_id" value="<?= $report['report_id'] ?>">
                                                         <input type="hidden" name="action" value="delete_post">
-                                                        <button type="submit" class="dropdown-item text-danger">
-                                                            <i class="fas fa-trash"></i> Delete Post
+                                                        <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Are you sure you want to delete this post and all its reports? This action cannot be undone.')">
+                                                            <i class="fas fa-trash-alt"></i> Delete Post
                                                         </button>
                                                     </form>
                                                 </li>
@@ -225,91 +206,100 @@ $reports = $stmt->get_result();
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
+<!-- Post Details Modal (Optional - if you have a separate get_post.php) -->
+<div class="modal fade" id="viewPostModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title" id="viewPostTitle">Post Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                Are you sure you want to delete this post? This action cannot be undone.
-            </div>
-            <div class="modal-footer">
-                <form method="POST">
-                    <input type="hidden" name="report_id" id="deleteReportId">
-                    <input type="hidden" name="action" value="delete_post">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete Post</button>
-                </form>
+                <div class="mb-3">
+                    <strong>Content:</strong> <span id="viewPostContent"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Author:</strong> <span id="viewPostAuthor"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Community:</strong> <span id="viewPostCommunity"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Posted On:</strong> <span id="viewPostDate"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Upvotes:</strong> <span id="viewPostUpvotes"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Downvotes:</strong> <span id="viewPostDownvotes"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Views:</strong> <span id="viewPostViews"></span>
+                </div>
+                <div id="viewPostFiles" class="mb-3"></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Dismiss Confirmation Modal -->
-<div class="modal fade" id="dismissModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Dismiss</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to dismiss this report?
-            </div>
-            <div class="modal-footer">
-                <form method="POST">
-                    <input type="hidden" name="report_id" id="dismissReportId">
-                    <input type="hidden" name="action" value="dismiss_report">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Dismiss Report</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function confirmDelete(reportId) {
-    document.getElementById('deleteReportId').value = reportId;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
-
-function dismissReport(reportId) {
-    document.getElementById('dismissReportId').value = reportId;
-    new bootstrap.Modal(document.getElementById('dismissModal')).show();
-}
-
-function viewPost(postId) {
-    window.open('../post.php?id=' + postId, '_blank');
-}
-</script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Initialize all tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        });
-
-        // Initialize all popovers
-        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-            return new bootstrap.Popover(popoverTriggerEl)
-        });
-
-        // Confirm delete actions
-        document.querySelectorAll('.delete-confirm').forEach(function(element) {
-            element.addEventListener('click', function(e) {
-                if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-                    e.preventDefault();
+    function viewPost(postId) {
+        fetch(`get_post.php?id=${postId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
                 }
+                document.getElementById('viewPostTitle').textContent = `Post by ${data.username}`;
+                document.getElementById('viewPostContent').textContent = data.content;
+                document.getElementById('viewPostAuthor').textContent = `@${data.username}`;
+                document.getElementById('viewPostCommunity').textContent = data.community_name || 'None';
+                document.getElementById('viewPostDate').textContent = new Date(data.created_at).toLocaleString();
+                document.getElementById('viewPostUpvotes').textContent = data.upvotes;
+                document.getElementById('viewPostDownvotes').textContent = data.downvotes;
+                document.getElementById('viewPostViews').textContent = data.views;
+
+                const filesDiv = document.getElementById('viewPostFiles');
+                filesDiv.innerHTML = ''; // Clear previous files
+                if (data.files && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        if (file.file_type.startsWith('image')) {
+                            const img = document.createElement('img');
+                            img.src = file.file_path;
+                            img.alt = "Post Image";
+                            img.className = "img-fluid mb-2";
+                            filesDiv.appendChild(img);
+                        } else if (file.file_type.startsWith('video')) {
+                            const video = document.createElement('video');
+                            video.controls = true;
+                            video.className = "img-fluid mb-2";
+                            const source = document.createElement('source');
+                            source.src = file.file_path;
+                            source.type = file.file_type;
+                            video.appendChild(source);
+                            filesDiv.appendChild(video);
+                        }
+                    });
+                }
+                new bootstrap.Modal(document.getElementById('viewPostModal')).show();
+            })
+            .catch(error => {
+                console.error('Error fetching post details:', error);
+                alert('Error loading post details.');
             });
-        });
-    </script>
+    }
+
+    function confirmDelete(reportId) {
+        document.getElementById('deleteReportId').value = reportId;
+        new bootstrap.Modal(document.getElementById('deleteReportModal')).show();
+    }
+
+    function confirmDismiss(reportId) {
+        document.getElementById('dismissReportId').value = reportId;
+        new bootstrap.Modal(document.getElementById('dismissReportModal')).show();
+    }
+</script>
 </body>
 </html>

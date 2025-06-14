@@ -1,14 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blipp-post</title>
-    <link rel="icon" href="../favicon (2).png" type="image/x-icon">
-</head>
-<body>
-    <?php
-require_once 'includes/header.php';
+<?php
+require_once 'includes/auth.php';
+
+// Debugging: Check if $mysqli is properly initialized
+if (!isset($mysqli) || $mysqli->connect_error) {
+    die("Database connection failed: " . ($mysqli->connect_error ?? "Unknown error"));
+}
 
 // Handle post actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -103,6 +99,7 @@ if (!empty($params)) {
 $stmt->execute();
 $posts = $stmt->get_result();
 ?>
+<?php require_once 'includes/header.php'; ?>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -204,154 +201,130 @@ $posts = $stmt->get_result();
             </div>
         </div>
     </div>
-</div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this post? This action cannot be undone.
-            </div>
-            <div class="modal-footer">
-                <form method="POST">
-                    <input type="hidden" name="post_id" id="deletePostId">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" name="delete_post" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Post Preview Modal -->
-<div class="modal fade" id="postPreviewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Post Preview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="postPreviewContent">
-                    <!-- Content will be loaded here -->
+    <!-- Post Details Modal -->
+    <div class="modal fade" id="viewPostModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewPostTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>Content:</strong> <span id="viewPostContent"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Author:</strong> <span id="viewPostAuthor"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Community:</strong> <span id="viewPostCommunity"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Posted On:</strong> <span id="viewPostDate"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Upvotes:</strong> <span id="viewPostUpvotes"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Downvotes:</strong> <span id="viewPostDownvotes"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Views:</strong> <span id="viewPostViews"></span>
+                    </div>
+                    <div id="viewPostFiles" class="mb-3"></div>
+                    <div class="mb-3">
+                        <strong>Comments:</strong> <span id="viewPostComments"></span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-function confirmDelete(postId) {
-    document.getElementById('deletePostId').value = postId;
-    var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
-}
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this post? This action cannot be undone and will delete all associated comments, files, and reports.
+                </div>
+                <div class="modal-footer">
+                    <form method="POST">
+                        <input type="hidden" name="post_id" id="deletePostId">
+                        <input type="hidden" name="delete_post" value="1">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete Post</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-function viewPost(postId) {
-    // Show loading state
-    document.getElementById('postPreviewContent').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
-    
-    // Show modal
-    var modal = new bootstrap.Modal(document.getElementById('postPreviewModal'));
-    modal.show();
-    
-    // Fetch post data
-    fetch(`get_post.php?id=${postId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const post = data.post;
-                let content = `
-                    <div class="post-preview">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-user-circle fa-2x text-gray-300"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">@${post.username}</h6>
-                                <small class="text-muted">${post.created_at}</small>
-                            </div>
-                        </div>
-                        <div class="post-content mb-3">
-                            ${post.content}
-                        </div>`;
-                
+    <script>
+    function viewPost(postId) {
+        fetch(`get_post.php?id=${postId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message || 'Error loading post details.');
+                    return;
+                }
+                const post = data.post; // Access the nested post object
+                document.getElementById('viewPostTitle').textContent = `Post by ${post.username}`;
+                document.getElementById('viewPostContent').textContent = post.content;
+                document.getElementById('viewPostAuthor').textContent = `@${post.username}`;
+                document.getElementById('viewPostCommunity').textContent = post.community_name || 'None';
+                document.getElementById('viewPostDate').textContent = post.created_at; // Use already formatted date
+                document.getElementById('viewPostUpvotes').textContent = post.upvotes;
+                document.getElementById('viewPostDownvotes').textContent = post.downvotes;
+                document.getElementById('viewPostViews').textContent = post.views;
+
+                const filesDiv = document.getElementById('viewPostFiles');
+                filesDiv.innerHTML = ''; // Clear previous files
                 if (post.files && post.files.length > 0) {
-                    content += '<div class="post-files mb-3">';
                     post.files.forEach(file => {
-                        if (file.file_type.startsWith('image/')) {
-                            content += `
-                                <img src="../${file.file_path}" 
-                                     class="img-fluid rounded mb-2" 
-                                     alt="Post Image"
-                                     style="max-height: 300px; object-fit: contain;">`;
-                        } else {
-                            content += `
-                                <div class="card mb-2">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-file fa-2x text-gray-300"></i>
-                                        <p class="mt-2 mb-0">${file.file_name}</p>
-                                    </div>
-                                </div>`;
+                        if (file.file_type.startsWith('image')) {
+                            const img = document.createElement('img');
+                            let imageUrl = file.file_path;
+                            // Prepend '../' if it's a relative path and doesn't start with 'http'
+                            if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+                                imageUrl = '../' + imageUrl;
+                            }
+                            img.src = imageUrl;
+                            img.alt = "Post Image";
+                            img.className = "img-fluid mb-2";
+                            img.onerror = function() { this.onerror=null; this.src='../assets/images/placeholder.png'; }; // Fallback image
+                            filesDiv.appendChild(img);
+                        } else if (file.file_type.startsWith('video')) {
+                            const video = document.createElement('video');
+                            video.controls = true;
+                            video.className = "img-fluid mb-2";
+                            const source = document.createElement('source');
+                            source.src = file.file_path;
+                            source.type = file.file_type;
+                            video.appendChild(source);
+                            filesDiv.appendChild(video);
                         }
                     });
-                    content += '</div>';
                 }
-                
-                content += `
-                    <div class="post-stats">
-                        <small class="text-muted">
-                            <i class="fas fa-comments"></i> ${post.comment_count} Comments
-                            <span class="mx-2">|</span>
-                            <i class="fas fa-flag"></i> ${post.report_count} Reports
-                        </small>
-                    </div>`;
-                
-                document.getElementById('postPreviewContent').innerHTML = content;
-            } else {
-                document.getElementById('postPreviewContent').innerHTML = `
-                    <div class="alert alert-danger">
-                        ${data.message || 'Failed to load post preview.'}
-                    </div>`;
-            }
-        })
-        .catch(error => {
-            document.getElementById('postPreviewContent').innerHTML = `
-                <div class="alert alert-danger">
-                    Error loading post preview. Please try again.
-                </div>`;
-        });
-}
-</script>
+                document.getElementById('viewPostComments').textContent = post.comment_count;
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Initialize all tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        });
-
-        // Initialize all popovers
-        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-            return new bootstrap.Popover(popoverTriggerEl)
-        });
-
-        // Confirm delete actions
-        document.querySelectorAll('.delete-confirm').forEach(function(element) {
-            element.addEventListener('click', function(e) {
-                if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-                    e.preventDefault();
-                }
+                new bootstrap.Modal(document.getElementById('viewPostModal')).show();
+            })
+            .catch(error => {
+                console.error('Error fetching post details:', error);
+                alert('Error loading post details.');
             });
-        });
+    }
+
+    function confirmDelete(postId) {
+        document.getElementById('deletePostId').value = postId;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
     </script>
 </body>
 </html>

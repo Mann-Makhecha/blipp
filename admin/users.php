@@ -1,14 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blipp - user</title>
-    <link rel="icon" href="../favicon (2).png" type="image/x-icon">
-</head>
-<body>
-    <?php
-require_once 'includes/header.php';
+<?php
+require_once __DIR__ . '/includes/auth.php';
+
+// Debugging: Check if $mysqli is properly initialized
+if (!isset($mysqli) || $mysqli->connect_error) {
+    die("Database connection failed in users.php: " . ($mysqli->connect_error ?? "Unknown error"));
+}
 
 // Handle user actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -76,6 +72,7 @@ if (!empty($params)) {
 $stmt->execute();
 $users = $stmt->get_result();
 ?>
+<?php require_once 'includes/header.php'; ?>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -219,7 +216,7 @@ $users = $stmt->get_result();
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -234,64 +231,19 @@ $users = $stmt->get_result();
                     <input type="hidden" name="user_id" id="deleteUserId">
                     <input type="hidden" name="action" value="delete">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-danger">Delete User</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function toggleRole(userId, currentRole) {
-    if (confirm('Are you sure you want to change this user\'s role?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="user_id" value="${userId}">
-            <input type="hidden" name="action" value="toggle_role">
-        `;
-        document.body.appendChild(form);
-        form.submit();
+    function confirmDelete(userId) {
+        document.getElementById('deleteUserId').value = userId;
+        new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
     }
-}
-
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="user_id" value="${userId}">
-            <input type="hidden" name="action" value="delete">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
 </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Initialize all tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        });
-
-        // Initialize all popovers
-        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-            return new bootstrap.Popover(popoverTriggerEl)
-        });
-
-        // Confirm delete actions
-        document.querySelectorAll('.delete-confirm').forEach(function(element) {
-            element.addEventListener('click', function(e) {
-                if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-                    e.preventDefault();
-                }
-            });
-        });
-    </script>
 </body>
 </html>
