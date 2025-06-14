@@ -1,7 +1,7 @@
 <?php
+session_start(); // Must be the very first line
 require_once 'includes/db.php';
 require_once 'includes/settings.php';
-session_start();
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -60,7 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $mysqli->commit();
             $_SESSION['success_message'] = "Community created successfully!";
-            header("Location: community.php?community_id=" . $community_id);
+            // Redirect to admin/communities.php
+            header("Location: admin/communities.php");
+            exit();
         } else {
             throw new Exception("Error creating community");
         }
@@ -68,8 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mysqli->rollback();
         $_SESSION['error_message'] = "Error creating community: " . $e->getMessage();
         header("Location: create_community.php");
+        exit();
     }
-    exit();
 }
 ?>
 <!DOCTYPE html>

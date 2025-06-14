@@ -11,6 +11,12 @@
 require_once 'includes/header.php';
 require_once '../includes/settings.php';
 
+// Display success message if set
+if (!empty($_SESSION['success_message'])) {
+    echo "<script>alert('" . htmlspecialchars($_SESSION['success_message']) . "');</script>";
+    unset($_SESSION['success_message']);
+}
+
 // First, let's check if the communities table exists and its structure
 $table_check = $mysqli->query("SHOW TABLES LIKE 'communities'");
 if ($table_check->num_rows === 0) {
