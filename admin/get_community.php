@@ -2,11 +2,6 @@
 require_once '../includes/db.php';
 require_once 'includes/auth.php';
 
-// Check if user is admin
-if (!is_admin()) {
-    die(json_encode(['success' => false, 'message' => 'Unauthorized']));
-}
-
 // Get community ID
 $community_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if (!$community_id) {
@@ -29,13 +24,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($community = $result->fetch_assoc()) {
-    echo json_encode([
-        'success' => true,
-        'community' => $community
-    ]);
+    echo json_encode($community);
 } else {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Community not found'
-    ]);
+    echo json_encode(['error' => 'Community not found']);
 } 

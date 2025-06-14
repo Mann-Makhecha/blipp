@@ -1,10 +1,17 @@
 <?php
-function is_admin() {
-    return isset($_SESSION['user_id']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
-}
+session_start();
+require_once __DIR__ . '/../../includes/db.php';
 
-// Redirect if not admin
-if (!is_admin()) {
+// Check if user is logged in and is admin
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../login.php");
     exit();
-} 
+}
+
+// Get admin info
+$admin_id = $_SESSION['user_id'];
+$admin_query = $mysqli->prepare("SELECT username, email FROM users WHERE user_id = ?");
+$admin_query->bind_param("i", $admin_id);
+$admin_query->execute();
+$admin = $admin_query->get_result()->fetch_assoc();
+?> 
