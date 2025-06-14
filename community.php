@@ -22,12 +22,20 @@ $community = null;
 $is_member = false;
 if ($mysqli && $community_id > 0) {
     try {
-        $stmt = $mysqli->prepare("SELECT community_id, name, description, is_private, created_at, member_count FROM communities WHERE community_id = ?");
+        $query = "SELECT c.*, \n                   COUNT(DISTINCT cm.user_id) as member_count,\n                   COUNT(DISTINCT p.post_id) as post_count,\n                   u.username as creator_username\n            FROM communities c\n            LEFT JOIN community_members cm ON c.community_id = cm.community_id\n            LEFT JOIN posts p ON c.community_id = p.community_id\n            LEFT JOIN users u ON c.creator_id = u.user_id\n            WHERE c.community_id = ?\n            GROUP BY c.community_id";
+        
+        // Debugging: Output the query
+        // echo "<!-- SQL Query: " . htmlspecialchars($query) . " -->";
+
+        $stmt = $mysqli->prepare($query);
         $stmt->bind_param("i", $community_id);
         $stmt->execute();
         $result = $stmt->get_result();
         $community = $result->fetch_assoc();
         $stmt->close();
+
+        // Debugging: Output the fetched community array
+        // echo "<!-- Community Data: "; var_dump($community); echo " -->";
 
         // Check if user is a member
         if ($user_id) {
@@ -65,6 +73,40 @@ if (isset($_GET['join']) && $user_id && $mysqli && $community_id > 0) {
         }
     } catch (mysqli_sql_exception $e) {
         $errors[] = "Error joining community: " . $e->getMessage();
+    }
+}
+
+// Handle leaving the community
+if (isset($_GET['leave']) && $user_id && $mysqli && $community_id > 0) {
+    try {
+        // Check if user is the creator
+        if ($community['creator_id'] == $user_id) {
+            $_SESSION['error_message'] = "You cannot leave a community you created. Please delete it instead.";
+        } else {
+            // Start transaction
+            $mysqli->begin_transaction();
+            
+            // Remove user from community members
+            $stmt = $mysqli->prepare("DELETE FROM community_members WHERE community_id = ? AND user_id = ?");
+            $stmt->bind_param("ii", $community_id, $user_id);
+            $stmt->execute();
+
+            // Update member count
+            $stmt = $mysqli->prepare("UPDATE communities SET member_count = (SELECT COUNT(*) FROM community_members WHERE community_id = ?) WHERE community_id = ?");
+            $stmt->bind_param("ii", $community_id, $community_id);
+            $stmt->execute();
+
+            $mysqli->commit();
+            $_SESSION['success_message'] = "You have successfully left the community.";
+        }
+        
+        header("Location: community.php?community_id=" . $community_id);
+        exit();
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        $_SESSION['error_message'] = "Error leaving community: " . $e->getMessage();
+        header("Location: community.php?community_id=" . $community_id);
+        exit();
     }
 }
 
@@ -247,17 +289,24 @@ if ($mysqli && $community_id > 0) {
                 <!-- Community Details -->
                 <?php if ($community): ?>
                     <div class="community-header mb-4">
-                        <h3 class="fw-bold"><?= htmlspecialchars($community['name']) ?></h3>
-                        <p><?= htmlspecialchars($community['description'] ?? 'No description') ?></p>
-                        <p class=" small">
-                            Created on: <?= date('F j, Y', strtotime($community['created_at'])) ?> |
-                            Members: <?= $community['member_count'] ?>
-                        </p>
-                        <?php if ($user_id && !$is_member): ?>
-                            <a href="community.php?community_id=<?= $community_id ?>&join=1" class="btn btn-outline-primary btn-sm rounded-pill">
-                                Join Community
-                            </a>
-                        <?php endif; ?>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="fw-bold"><?= htmlspecialchars($community['name']) ?></h3>
+                            <?php if ($is_member && $community['creator_id'] != $_SESSION['user_id']): ?>
+                                <a href="community.php?community_id=<?= $community_id ?>&leave=1" 
+                                   class="btn btn-danger"
+                                   onclick="return confirm('Are you sure you want to leave this community?')">
+                                    <i class="fas fa-sign-out-alt"></i> Leave Community
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                        <p class="text-muted"><?= htmlspecialchars($community['description']) ?></p>
+                        <div class="d-flex gap-3">
+                            <span><i class="fas fa-users"></i> <?= number_format($community['member_count']) ?> members</span>
+                            <span><i class="fas fa-file-alt"></i> <?= number_format($community['post_count']) ?> posts</span>
+                            <?php if ($community['is_private']): ?>
+                                <span class="badge bg-warning"><i class="fas fa-lock"></i> Private</span>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <!-- Create Post Form (for members only) -->

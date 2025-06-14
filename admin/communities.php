@@ -61,6 +61,7 @@ $communities = $mysqli->query("
     ORDER BY c.created_at DESC
 ");
 
+// Include header after all processing is done
 require_once 'includes/header.php';
 ?>
 
