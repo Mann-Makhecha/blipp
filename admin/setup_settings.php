@@ -2,15 +2,15 @@
 require_once '../includes/db.php';
 
 // Default settings
-$settings = [
-    'maintenance_mode' => '0',
-    'maintenance_message' => 'The site is currently under maintenance. Please check back later.',
+$default_settings = [
+    'site_name' => 'Blipp',
+    'site_description' => 'A social platform for sharing and connecting',
     'require_email_verification' => '0',
     'community_creation_points' => '1000' // Points required to create a community
 ];
 
 // Insert or update settings
-foreach ($settings as $key => $value) {
+foreach ($default_settings as $key => $value) {
     $stmt = $mysqli->prepare("
         INSERT INTO admin_settings (setting_key, setting_value) 
         VALUES (?, ?) 

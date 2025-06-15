@@ -71,24 +71,19 @@ require_once 'includes/header.php';
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Maintenance Settings</h5>
+                    <h5 class="card-title mb-0">General Settings</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="">
                         <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="maintenance_mode" name="maintenance_mode" 
-                                       <?= ($settings['maintenance_mode'] ?? '0') === '1' ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="maintenance_mode">Enable Maintenance Mode</label>
-                            </div>
-                            <small class="text-muted">When enabled, only administrators can access the site.</small>
+                            <label for="site_name" class="form-label">Site Name</label>
+                            <input type="text" class="form-control" id="site_name" name="site_name" value="<?= htmlspecialchars($settings['site_name'] ?? '') ?>">
                         </div>
-
                         <div class="mb-3">
-                            <label for="maintenance_message" class="form-label">Maintenance Message</label>
-                            <textarea class="form-control" id="maintenance_message" name="maintenance_message" rows="3"><?= htmlspecialchars($settings['maintenance_message'] ?? '') ?></textarea>
-                            <small class="text-muted">This message will be displayed to users during maintenance.</small>
+                            <label for="site_description" class="form-label">Site Description</label>
+                            <textarea class="form-control" id="site_description" name="site_description" rows="3"><?= htmlspecialchars($settings['site_description'] ?? '') ?></textarea>
                         </div>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
                     </form>
                 </div>
             </div>

@@ -9,12 +9,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check if maintenance mode is enabled
-if (is_maintenance_mode()) {
-    header("Location: maintenance.php");
-    exit();
-}
-
 $error = '';
 $success = '';
 

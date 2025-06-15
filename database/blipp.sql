@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: Jun 14, 2025 at 02:39 PM
+-- Generation Time: Jun 15, 2025 at 05:58 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,9 +44,7 @@ INSERT INTO `admin_settings` (`setting_id`, `setting_key`, `setting_value`, `upd
 (3, 'allow_registration', '1', '2025-06-14 13:39:15'),
 (4, 'require_email_verification', '0', '2025-06-14 13:39:15'),
 (5, 'max_file_size', '5', '2025-06-14 13:39:15'),
-(6, 'allowed_file_types', 'jpg,jpeg,png,gif', '2025-06-14 13:39:15'),
-(7, 'maintenance_mode', '0', '2025-06-14 15:03:30'),
-(8, 'maintenance_message', '', '2025-06-14 15:03:30');
+(6, 'allowed_file_types', 'jpg,jpeg,png,gif', '2025-06-14 13:39:15');
 
 -- --------------------------------------------------------
 
@@ -171,7 +169,14 @@ CREATE TABLE `communities` (
 --
 
 INSERT INTO `communities` (`community_id`, `name`, `description`, `creator_id`, `is_private`, `member_count`, `banner_image`, `theme_color`, `created_at`, `updated_at`) VALUES
-(12, 'Gadget Geeks', 'A community for gadget lovers to discuss the latest tech devices.', 1, 0, 7, NULL, NULL, '2025-06-11 14:46:00', '2025-06-14 14:44:31');
+(12, 'Gadget Geeks', 'A community for gadget lovers to discuss the latest tech devices.', 1, 0, 6, NULL, NULL, '2025-06-11 14:46:00', '2025-06-14 19:17:20'),
+(15, 'mann', '..', 18, 0, 0, NULL, NULL, '2025-06-14 18:42:37', '2025-06-14 18:42:37'),
+(16, 'snaki', '..', 18, 0, 0, NULL, NULL, '2025-06-14 18:44:52', '2025-06-14 18:44:52'),
+(17, 'test1', '..', 18, 0, 0, NULL, NULL, '2025-06-14 18:51:21', '2025-06-14 18:51:21'),
+(18, 'samkit', '..', 18, 0, 0, NULL, NULL, '2025-06-14 18:52:47', '2025-06-14 18:52:47'),
+(19, 'test2', '..', 18, 0, 0, NULL, NULL, '2025-06-14 18:53:42', '2025-06-14 18:53:42'),
+(20, 'test3', '..', 18, 0, 0, NULL, NULL, '2025-06-14 18:56:07', '2025-06-14 18:56:07'),
+(21, 'test5', '..', 18, 0, 0, NULL, NULL, '2025-06-14 18:57:09', '2025-06-14 18:57:09');
 
 -- --------------------------------------------------------
 
@@ -183,6 +188,7 @@ CREATE TABLE `community_members` (
   `member_id` int(11) NOT NULL,
   `community_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
+  `role` enum('member','moderator','admin') DEFAULT 'member',
   `is_admin` tinyint(1) DEFAULT 0,
   `join_date` datetime DEFAULT current_timestamp(),
   `joined_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -192,14 +198,20 @@ CREATE TABLE `community_members` (
 -- Dumping data for table `community_members`
 --
 
-INSERT INTO `community_members` (`member_id`, `community_id`, `user_id`, `is_admin`, `join_date`, `joined_at`) VALUES
-(6, 12, 1, 0, '2025-06-11 14:55:38', '2025-06-11 09:16:00'),
-(7, 12, 2, 0, '2025-06-11 14:55:38', '2025-06-11 09:17:00'),
-(8, 12, 3, 0, '2025-06-11 14:55:38', '2025-06-11 09:18:00'),
-(9, 12, 7, 0, '2025-06-11 14:57:28', '2025-06-11 09:27:28'),
-(10, 12, 14, 0, '2025-06-12 12:19:25', '2025-06-12 06:49:25'),
-(11, 12, 15, 0, '2025-06-12 12:55:23', '2025-06-12 07:25:23'),
-(12, 12, 225, 0, '2025-06-14 14:44:31', '2025-06-14 09:14:31');
+INSERT INTO `community_members` (`member_id`, `community_id`, `user_id`, `role`, `is_admin`, `join_date`, `joined_at`) VALUES
+(6, 12, 1, 'member', 0, '2025-06-11 14:55:38', '2025-06-11 09:16:00'),
+(7, 12, 2, 'member', 0, '2025-06-11 14:55:38', '2025-06-11 09:17:00'),
+(8, 12, 3, 'member', 0, '2025-06-11 14:55:38', '2025-06-11 09:18:00'),
+(10, 12, 14, 'member', 0, '2025-06-12 12:19:25', '2025-06-12 06:49:25'),
+(11, 12, 15, 'member', 0, '2025-06-12 12:55:23', '2025-06-12 07:25:23'),
+(12, 12, 225, 'member', 0, '2025-06-14 14:44:31', '2025-06-14 09:14:31'),
+(15, 15, 18, 'admin', 0, '2025-06-14 18:42:37', '2025-06-14 13:12:37'),
+(16, 16, 18, 'admin', 0, '2025-06-14 18:44:52', '2025-06-14 13:14:52'),
+(17, 17, 18, 'admin', 0, '2025-06-14 18:51:21', '2025-06-14 13:21:21'),
+(18, 18, 18, 'admin', 0, '2025-06-14 18:52:47', '2025-06-14 13:22:47'),
+(19, 19, 18, 'admin', 0, '2025-06-14 18:53:42', '2025-06-14 13:23:42'),
+(20, 20, 18, 'admin', 0, '2025-06-14 18:56:07', '2025-06-14 13:26:07'),
+(21, 21, 18, 'admin', 0, '2025-06-14 18:57:09', '2025-06-14 13:27:09');
 
 -- --------------------------------------------------------
 
@@ -224,8 +236,7 @@ CREATE TABLE `files` (
 INSERT INTO `files` (`file_id`, `post_id`, `file_name`, `file_path`, `file_type`, `file_size`, `uploaded_at`) VALUES
 (1, 9, 'Screenshot 2025-05-10 183444.png', 'uploads/684920bd77abc_Screenshot 2025-05-10 183444.png', 'image/png', 332741, '2025-06-11 11:52:53'),
 (2, 10, 'Screenshot 2025-04-27 214331.png', 'uploads/684923512b7da_Screenshot 2025-04-27 214331.png', 'image/png', 45692, '2025-06-11 12:03:53'),
-(3, 11, 'WhatsApp Image 2025-06-11 at 12.25.42_2d0e8bf2.jpg', 'uploads/684982c9cfcf5_WhatsApp Image 2025-06-11 at 12.25.42_2d0e8bf2.jpg', 'image/jpeg', 78260, '2025-06-11 18:51:13'),
-(4, 12, 'WhatsApp Image 2025-06-11 at 12.25.42_2d0e8bf2.jpg', 'uploads/6849841eb652d_WhatsApp Image 2025-06-11 at 12.25.42_2d0e8bf2.jpg', 'image/jpeg', 78260, '2025-06-11 18:56:54');
+(3, 11, 'WhatsApp Image 2025-06-11 at 12.25.42_2d0e8bf2.jpg', 'uploads/684982c9cfcf5_WhatsApp Image 2025-06-11 at 12.25.42_2d0e8bf2.jpg', 'image/jpeg', 78260, '2025-06-11 18:51:13');
 
 -- --------------------------------------------------------
 
@@ -334,8 +345,7 @@ INSERT INTO `posts` (`post_id`, `community_id`, `user_id`, `title`, `content`, `
 (8, NULL, 7, '', 'hi', 0, 0, '2025-06-11 11:47:07', '2025-06-11 11:47:07', 0),
 (9, NULL, 7, '', 'hello evryone how are you', 0, 0, '2025-06-11 11:52:53', '2025-06-11 11:52:53', 0),
 (10, NULL, 7, '', 'fsfv', 0, 0, '2025-06-11 12:03:53', '2025-06-11 12:03:53', 0),
-(11, 12, 7, '', 'hello', 0, 0, '2025-06-11 18:51:13', '2025-06-11 18:51:13', 0),
-(12, NULL, 7, '', 'hi', 0, 0, '2025-06-11 18:56:54', '2025-06-11 18:56:54', 0);
+(11, 12, 7, '', 'hello', 0, 0, '2025-06-11 18:51:13', '2025-06-11 18:51:13', 0);
 
 -- --------------------------------------------------------
 
@@ -449,12 +459,12 @@ INSERT INTO `users` (`user_id`, `username`, `email`, `profile_image`, `points`, 
 (1, 'creator_user', 'creator@example.com', NULL, 0, 0, NULL, '2025-06-01 14:40:00', '2025-06-11 14:48:03', 'hashed_password', NULL, NULL, NULL, NULL, 0, 'user', 0, 1),
 (2, 'member1', 'member1@example.com', NULL, 0, 0, NULL, '2025-06-01 14:40:00', '2025-06-11 14:48:03', 'hashed_password', NULL, NULL, NULL, NULL, 0, 'user', 0, 1),
 (3, 'member2', 'member2@example.com', NULL, 0, 0, NULL, '2025-06-01 14:40:00', '2025-06-11 14:48:03', 'hashed_password', NULL, NULL, NULL, NULL, 0, 'user', 0, 1),
-(7, 'mann', 'mann@mail.com', 'uploads/profile_684c4eed481e5.jpg', 0, 0, NULL, '2025-06-11 11:18:11', '2025-06-14 17:34:50', '$2y$10$Gmvzy2tDBb/8QPcjuvJJLOiws37DHSlXhVXz2N15wwdMB3x4RT0r.', 'mann', NULL, NULL, '', 0, 'user', 0, 1),
+(7, 'mann', 'mann@mail.com', 'uploads/profile_684c4eed481e5.jpg', 0, 0, NULL, '2025-06-11 11:18:11', '2025-06-14 20:05:35', '$2y$10$Gmvzy2tDBb/8QPcjuvJJLOiws37DHSlXhVXz2N15wwdMB3x4RT0r.', 'mann', NULL, NULL, '', 0, 'user', 0, 1),
 (14, 'mann2', 'mann@gmail.com', NULL, 0, 0, NULL, '2025-06-12 12:18:51', '2025-06-12 12:19:13', '$2y$10$KaOYAB5JxCLhBK1dSdflG.H8jEtgESphmoydlwxrEm4XdmkOTNo6q', 'mann', NULL, NULL, NULL, 0, 'user', 0, 1),
 (15, 'mann3', 'mann@hotmail.com', NULL, 0, 0, NULL, '2025-06-12 12:52:44', '2025-06-12 12:55:04', '$2y$10$6cV8/nia2bYD9OpNatFOAuJPcpTiwpn2KgAOIbzKQP/EqfMmiEDKa', 'mann', 'What is your favorite book?', '$2y$10$hLxsOtF5Dyj19cbvnIhXKeiq6DZDRK7FyE5.kNGTW69Ts5RCbNuBC', NULL, 0, 'user', 0, 1),
 (16, 'sanki', 'sanki@mail.com', NULL, 0, 0, NULL, '2025-06-13 14:51:36', '2025-06-13 14:52:20', '$2y$10$tvQ2ci78fiEY6pNDmR5Ozed/LI59wDHfAd4tUpLyPV2q4lB/yKE7G', 'samkit', 'What is your favorite book?', '$2y$10$UKti9W6J1519JFrwV2dY/O3uO8RwUuYwYdaKwCRF6mcsyOXx0IDjq', NULL, 0, 'user', 0, 1),
 (17, 'bhindi', 'brinda1@gmail.com', 'uploads/profile_684c522799f9b.PNG', 0, 0, NULL, '2025-06-13 21:59:55', '2025-06-13 22:00:31', '$2y$10$0pg9IHFiz3kts28e.9nLi.PvXJDJFAUXzkPG5MbLWE9RRY8IawFDa', 'brinda makhecha', 'What was the name of your first school?', '$2y$10$YRMtcQC/aPLPCGw6zwNoe.njKPcw0YXt7L.bCX7hLMe.1dBIcL01q', '', 0, 'user', 0, 1),
-(18, 'admin', 'admin@blipp.com', NULL, 0, 0, NULL, '2025-06-14 13:22:49', '2025-06-14 17:45:52', '$2y$10$I6.Vvv4v9nC.LlzAROiiJO9IWAtngasdb/XRkpCpk8f6MHJ.jtPui', NULL, NULL, NULL, NULL, 0, 'admin', 0, 1),
+(18, 'admin', 'admin@blipp.com', NULL, 0, 0, NULL, '2025-06-14 13:22:49', '2025-06-14 20:15:52', '$2y$10$I6.Vvv4v9nC.LlzAROiiJO9IWAtngasdb/XRkpCpk8f6MHJ.jtPui', NULL, NULL, NULL, NULL, 0, 'admin', 0, 1),
 (119, 'dhiraj', 'dhiraj@mail.com', NULL, 0, 0, NULL, '2025-06-14 14:09:49', '2025-06-14 14:10:15', '$2y$10$h/C8RFHXZMXiRckh9ldzHOYVKnfHIf2BZk9lRwdu24HC7kjkC17v6', NULL, NULL, NULL, NULL, 1, 'user', 0, 1),
 (171, 'premium_admin', 'premium@blipp.com', NULL, 0, 0, NULL, '2025-06-14 14:17:23', '2025-06-14 14:17:23', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, NULL, NULL, 0, 'admin', 0, 1),
 (225, 'makhecha', 'makhecha@blipp.com', NULL, 10000, 0, NULL, '2025-06-14 14:30:58', '2025-06-14 14:55:48', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, NULL, NULL, 0, 'user', 1, 1);
@@ -660,7 +670,7 @@ ALTER TABLE `user_badges`
 -- AUTO_INCREMENT for table `admin_settings`
 --
 ALTER TABLE `admin_settings`
-  MODIFY `setting_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `setting_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `badges`
@@ -702,13 +712,13 @@ ALTER TABLE `comment_votes`
 -- AUTO_INCREMENT for table `communities`
 --
 ALTER TABLE `communities`
-  MODIFY `community_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `community_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `community_members`
 --
 ALTER TABLE `community_members`
-  MODIFY `member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `files`
@@ -780,7 +790,7 @@ ALTER TABLE `remember_tokens`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=609;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1060;
 
 --
 -- AUTO_INCREMENT for table `user_badges`

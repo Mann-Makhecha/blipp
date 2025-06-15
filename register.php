@@ -11,12 +11,6 @@ if (!is_registration_allowed()) {
     exit();
 }
 
-// Check if maintenance mode is enabled
-if (is_maintenance_mode()) {
-    header("Location: maintenance.php");
-    exit();
-}
-
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Sanitize inputs
     $username = trim($_POST['username'] ?? '');
