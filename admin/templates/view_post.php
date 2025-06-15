@@ -1,72 +1,3 @@
-<?php
-require_once 'includes/auth.php';
-
-// Get post ID from URL
-$post_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-
-if (!$post_id) {
-    $_SESSION['error_message'] = "Invalid post ID.";
-    header("Location: posts.php");
-    exit();
-}
-
-// Get post details with user and community info
-$stmt = $mysqli->prepare("
-    SELECT 
-        p.*,
-        u.username,
-        u.email,
-        c.name as community_name,
-        c.community_id,
-        (SELECT COUNT(*) FROM comments WHERE post_id = p.post_id) as comment_count,
-        (SELECT COUNT(*) FROM post_reports WHERE post_id = p.post_id) as report_count
-    FROM posts p
-    JOIN users u ON p.user_id = u.user_id
-    LEFT JOIN communities c ON p.community_id = c.community_id
-    WHERE p.post_id = ?
-");
-$stmt->bind_param("i", $post_id);
-$stmt->execute();
-$post = $stmt->get_result()->fetch_assoc();
-
-if (!$post) {
-    $_SESSION['error_message'] = "Post not found.";
-    header("Location: posts.php");
-    exit();
-}
-
-// Get post files
-$files = $mysqli->query("
-    SELECT * FROM files 
-    WHERE post_id = $post_id
-");
-
-// Get post comments
-$comments = $mysqli->query("
-    SELECT 
-        c.*,
-        u.username
-    FROM comments c
-    JOIN users u ON c.user_id = u.user_id
-    WHERE c.post_id = $post_id
-    ORDER BY c.created_at DESC
-");
-
-// Get post reports
-$reports = $mysqli->query("
-    SELECT 
-        r.*,
-        u.username as reporter_username
-    FROM post_reports r
-    JOIN users u ON r.reporter_id = u.user_id
-    WHERE r.post_id = $post_id
-    ORDER BY r.created_at DESC
-");
-
-// Include header after all processing is done
-require_once 'includes/header.php';
-?>
-
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3">View Post</h1>
@@ -249,16 +180,12 @@ require_once 'includes/header.php';
                                         </small>
                                     </div>
                                     <p class="mb-1"><?= htmlspecialchars($report['reason']) ?></p>
+                                    <?php if ($report['details']): ?>
+                                        <small class="text-muted"><?= htmlspecialchars($report['details']) ?></small>
+                                    <?php endif; ?>
                                 </div>
                             <?php endwhile; ?>
                         </div>
-                        <?php if ($post['report_count'] > 5): ?>
-                            <div class="text-center mt-3">
-                                <a href="reports.php?post_id=<?= $post_id ?>" class="btn btn-sm btn-primary">
-                                    View All Reports
-                                </a>
-                            </div>
-                        <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>
@@ -266,59 +193,10 @@ require_once 'includes/header.php';
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this post? This action cannot be undone.
-            </div>
-            <div class="modal-footer">
-                <form method="POST" action="posts.php">
-                    <input type="hidden" name="post_id" id="deletePostId">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" name="delete_post" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 function confirmDelete(postId) {
-    document.getElementById('deletePostId').value = postId;
-    var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
+    if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+        window.location.href = `posts.php?action=delete&id=${postId}`;
+    }
 }
-</script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Initialize all tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        });
-
-        // Initialize all popovers
-        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-            return new bootstrap.Popover(popoverTriggerEl)
-        });
-
-        // Confirm delete actions
-        document.querySelectorAll('.delete-confirm').forEach(function(element) {
-            element.addEventListener('click', function(e) {
-                if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-                    e.preventDefault();
-                }
-            });
-        });
-    </script>
-</body>
-</html> 
+</script> 

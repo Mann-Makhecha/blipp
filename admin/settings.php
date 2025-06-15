@@ -16,43 +16,22 @@ $success = '';
 $error = '';
 
 // Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['update_settings'])) {
-        $maintenance_mode = isset($_POST['maintenance_mode']) ? 1 : 0;
-        $maintenance_message = trim($_POST['maintenance_message']);
-        $require_email_verification = isset($_POST['require_email_verification']) ? 1 : 0;
-        $community_creation_points = (int)$_POST['community_creation_points'];
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // Update site name
+    $site_name = trim($_POST['site_name']);
+    $stmt = $mysqli->prepare("UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'site_name'");
+    $stmt->bind_param("s", $site_name);
+    $stmt->execute();
 
-        try {
-            // Update maintenance mode
-            $stmt = $mysqli->prepare("UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'maintenance_mode'");
-            $stmt->bind_param("s", $maintenance_mode);
-            $stmt->execute();
-            $stmt->close();
+    // Update site description
+    $site_description = trim($_POST['site_description']);
+    $stmt = $mysqli->prepare("UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'site_description'");
+    $stmt->bind_param("s", $site_description);
+    $stmt->execute();
 
-            // Update maintenance message
-            $stmt = $mysqli->prepare("UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'maintenance_message'");
-            $stmt->bind_param("s", $maintenance_message);
-            $stmt->execute();
-            $stmt->close();
-
-            // Update email verification requirement
-            $stmt = $mysqli->prepare("UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'require_email_verification'");
-            $stmt->bind_param("s", $require_email_verification);
-            $stmt->execute();
-            $stmt->close();
-
-            // Update community creation points
-            $stmt = $mysqli->prepare("UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'community_creation_points'");
-            $stmt->bind_param("s", $community_creation_points);
-            $stmt->execute();
-            $stmt->close();
-
-            $success = "Settings updated successfully.";
-        } catch (Exception $e) {
-            $error = "Error updating settings: " . $e->getMessage();
-        }
-    }
+    // Redirect to prevent form resubmission
+    header("Location: settings.php?success=1");
+    exit();
 }
 
 // Get current settings

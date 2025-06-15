@@ -42,6 +42,61 @@ $recent_posts = $mysqli->query("
     LIMIT 5
 ");
 
+// Handle post view request
+if (isset($_GET['view_post'])) {
+    $post_id = (int)$_GET['view_post'];
+    
+    // Get post details
+    $post_query = $mysqli->prepare("
+        SELECT p.*, u.username, u.email, c.name as community_name, c.community_id,
+        (SELECT COUNT(*) FROM comments WHERE post_id = p.post_id) as comment_count,
+        (SELECT COUNT(*) FROM post_reports WHERE post_id = p.post_id) as report_count
+        FROM posts p
+        JOIN users u ON p.user_id = u.user_id
+        LEFT JOIN communities c ON p.community_id = c.community_id
+        WHERE p.post_id = ?
+    ");
+    $post_query->bind_param("i", $post_id);
+    $post_query->execute();
+    $post = $post_query->get_result()->fetch_assoc();
+    
+    if ($post) {
+        // Get post files
+        $files_query = $mysqli->prepare("SELECT * FROM files WHERE post_id = ?");
+        $files_query->bind_param("i", $post_id);
+        $files_query->execute();
+        $files = $files_query->get_result();
+        
+        // Get comments
+        $comments_query = $mysqli->prepare("
+            SELECT c.*, u.username 
+            FROM comments c
+            JOIN users u ON c.user_id = u.user_id
+            WHERE c.post_id = ?
+            ORDER BY c.created_at DESC
+        ");
+        $comments_query->bind_param("i", $post_id);
+        $comments_query->execute();
+        $comments = $comments_query->get_result();
+        
+        // Get reports
+        $reports_query = $mysqli->prepare("
+            SELECT r.*, u.username as reporter_username
+            FROM post_reports r
+            JOIN users u ON r.reporter_id = u.user_id
+            WHERE r.post_id = ?
+            ORDER BY r.created_at DESC
+        ");
+        $reports_query->bind_param("i", $post_id);
+        $reports_query->execute();
+        $reports = $reports_query->get_result();
+        
+        // Include the view post template
+        include 'templates/view_post.php';
+        exit;
+    }
+}
+
 // Get user registration statistics for the last 7 days
 $registration_stats = $mysqli->query("
     SELECT 
@@ -207,7 +262,7 @@ $chart_data = array_values($chart_data);
                                         <td><?= htmlspecialchars(substr($post['content'], 0, 100)) ?>...</td>
                                         <td><?= date('M d, Y H:i', strtotime($post['created_at'])) ?></td>
                                         <td>
-                                            <a href="view_post.php?id=<?= $post['post_id'] ?>" class="btn btn-sm btn-primary">
+                                            <a href="?view_post=<?= $post['post_id'] ?>" class="btn btn-sm btn-primary">
                                                 <i class="fas fa-eye"></i> View
                                             </a>
                                         </td>
