@@ -1,49 +1,187 @@
 <?php
-session_start();
+// session_start();
 require_once '../includes/db.php';
 require_once 'includes/auth.php';
 
-// Handle report actions
+// Add this at the top of the file, after session_start()
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action']) && isset($_POST['report_id'])) {
+    error_log("POST request received: " . print_r($_POST, true));
+    error_log("Raw POST data: " . file_get_contents('php://input'));
+    error_log("Request headers: " . print_r(getallheaders(), true));
+}
+
+// Handle view post page
+if (isset($_GET['view']) && $_GET['view'] === 'post') {
+    $post_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+    if (!$post_id) {
+        $_SESSION['error_message'] = "Invalid post ID.";
+        header("Location: reports.php");
+        exit();
+    }
+
+    // Get post details with user and community info
+    $stmt = $mysqli->prepare("
+        SELECT 
+            p.*,
+            u.username,
+            u.email,
+            c.name as community_name,
+            c.community_id,
+            (SELECT COUNT(*) FROM comments WHERE post_id = p.post_id) as comment_count,
+            (SELECT COUNT(*) FROM post_reports WHERE post_id = p.post_id) as report_count
+        FROM posts p
+        JOIN users u ON p.user_id = u.user_id
+        LEFT JOIN communities c ON p.community_id = c.community_id
+        WHERE p.post_id = ?
+    ");
+    $stmt->bind_param("i", $post_id);
+    $stmt->execute();
+    $post = $stmt->get_result()->fetch_assoc();
+
+    if (!$post) {
+        $_SESSION['error_message'] = "Post not found.";
+        header("Location: reports.php");
+        exit();
+    }
+
+    // Get post files
+    $files = $mysqli->query("
+        SELECT * FROM files 
+        WHERE post_id = $post_id
+    ");
+
+    // Get post comments
+    $comments = $mysqli->query("
+        SELECT 
+            c.*,
+            u.username
+        FROM comments c
+        JOIN users u ON c.user_id = u.user_id
+        WHERE c.post_id = $post_id
+        ORDER BY c.created_at DESC
+    ");
+
+    // Get post reports
+    $reports = $mysqli->query("
+        SELECT 
+            r.*,
+            u.username as reporter_username
+        FROM post_reports r
+        JOIN users u ON r.reporter_id = u.user_id
+        WHERE r.post_id = $post_id
+        ORDER BY r.created_at DESC
+    ");
+
+    // Include view post template
+    require_once 'includes/header.php';
+    include 'templates/view_post.php';
+    exit();
+}
+
+// Handle post actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    error_log("POST request received in reports.php: " . print_r($_POST, true));
+    
+    if (isset($_POST['delete_post']) && isset($_POST['post_id'])) {
+        error_log("Delete post action triggered");
+        $post_id = (int)$_POST['post_id'];
+        error_log("Post ID to delete: " . $post_id);
+        
+        // Start transaction
+        $mysqli->begin_transaction();
+        
+        try {
+            // Delete associated files
+            $file_stmt = $mysqli->prepare("SELECT file_path FROM files WHERE post_id = ?");
+            $file_stmt->bind_param("i", $post_id);
+            $file_stmt->execute();
+            $file_result = $file_stmt->get_result();
+            
+            while ($file = $file_result->fetch_assoc()) {
+                if (file_exists($file['file_path'])) {
+                    unlink($file['file_path']);
+                }
+            }
+            
+            // Delete files from database
+            $mysqli->query("DELETE FROM files WHERE post_id = $post_id");
+            error_log("Files deleted from database");
+            
+            // Delete comments
+            $mysqli->query("DELETE FROM comments WHERE post_id = $post_id");
+            error_log("Comments deleted");
+            
+            // Delete reports
+            $mysqli->query("DELETE FROM post_reports WHERE post_id = $post_id");
+            error_log("Reports deleted");
+            
+            // Delete the post
+            $mysqli->query("DELETE FROM posts WHERE post_id = $post_id");
+            error_log("Post deleted");
+            
+            $mysqli->commit();
+            error_log("Transaction committed successfully");
+            $_SESSION['success_message'] = "Post deleted successfully.";
+        } catch (Exception $e) {
+            $mysqli->rollback();
+            error_log("Error deleting post: " . $e->getMessage());
+            $_SESSION['error_message'] = "Error deleting post: " . $e->getMessage();
+        }
+        
+        header("Location: reports.php");
+        exit();
+    } elseif (isset($_POST['action']) && isset($_POST['report_id'])) {
         $report_id = (int)$_POST['report_id'];
         $action = $_POST['action'];
         
-        if ($action === 'delete_post') {
-            // Get post_id from report
-            $stmt = $mysqli->prepare("SELECT post_id FROM post_reports WHERE report_id = ?");
-            $stmt->bind_param("i", $report_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $report = $result->fetch_assoc();
-            
-            if ($report) {
-                // Delete post and its associated files
-                $post_id = $report['post_id'];
-                
-                // Delete files first
-                $mysqli->query("DELETE FROM files WHERE post_id = $post_id");
-                
-                // Delete post
-                $mysqli->query("DELETE FROM posts WHERE post_id = $post_id");
-                
-                // Delete all reports for this post
-                $mysqli->query("DELETE FROM post_reports WHERE post_id = $post_id");
-                
-                $_SESSION['success_message'] = "Post has been deleted successfully.";
-            }
-        } elseif ($action === 'dismiss_report') {
+        if ($action === 'resolve') {
             // Delete the report
             $stmt = $mysqli->prepare("DELETE FROM post_reports WHERE report_id = ?");
             $stmt->bind_param("i", $report_id);
             if ($stmt->execute()) {
                 $_SESSION['success_message'] = "Report has been dismissed.";
+            } else {
+                $_SESSION['error_message'] = "Error dismissing report.";
             }
+        } else {
+            $_SESSION['error_message'] = "Invalid action.";
         }
         
         header("Location: reports.php");
         exit();
     }
+}
+
+// Handle GET actions (for delete from view_post.php)
+if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+    $post_id = (int)$_GET['id'];
+    
+    // Start transaction
+    $mysqli->begin_transaction();
+    
+    try {
+        // Delete files first
+        $mysqli->query("DELETE FROM files WHERE post_id = $post_id");
+        
+        // Delete comments
+        $mysqli->query("DELETE FROM comments WHERE post_id = $post_id");
+        
+        // Delete reports
+        $mysqli->query("DELETE FROM post_reports WHERE post_id = $post_id");
+        
+        // Delete the post
+        $mysqli->query("DELETE FROM posts WHERE post_id = $post_id");
+        
+        $mysqli->commit();
+        $_SESSION['success_message'] = "Post has been deleted successfully.";
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        $_SESSION['error_message'] = "Error deleting post: " . $e->getMessage();
+    }
+    
+    header("Location: reports.php");
+    exit();
 }
 
 // Search and filter functionality
@@ -164,37 +302,26 @@ $reports = $stmt->get_result();
                                 </td>
                                 <td><?= date('M d, Y', strtotime($report['created_at'])) ?></td>
                                 <td>
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="dropdown">
-                                            <i class="fas fa-ellipsis-v"></i>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a href="../post.php?id=<?= $report['post_id'] ?>" class="dropdown-item" target="_blank">
-                                                    <i class="fas fa-eye"></i> View Post
-                                                </a>
-                                            </li>
-                                            <?php if ($report['status'] === 'pending'): ?>
-                                                <li>
-                                                    <form method="POST" class="d-inline">
-                                                        <input type="hidden" name="report_id" value="<?= $report['report_id'] ?>">
-                                                        <input type="hidden" name="action" value="resolve">
-                                                        <button type="submit" class="dropdown-item text-success" onclick="return confirm('Are you sure you want to dismiss this report?')">
-                                                            <i class="fas fa-check"></i> Dismiss Report
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                                <li>
-                                                    <form method="POST" class="d-inline">
-                                                        <input type="hidden" name="report_id" value="<?= $report['report_id'] ?>">
-                                                        <input type="hidden" name="action" value="delete_post">
-                                                        <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Are you sure you want to delete this post and all its reports? This action cannot be undone.')">
-                                                            <i class="fas fa-trash-alt"></i> Delete Post
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                            <?php endif; ?>
-                                        </ul>
+                                    <div class="d-flex gap-2">
+                                        <a href="?view=post&id=<?= $report['post_id'] ?>" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <?php if ($report['status'] === 'pending'): ?>
+                                            <form method="POST" action="reports.php" class="d-inline">
+                                                <input type="hidden" name="report_id" value="<?= $report['report_id'] ?>">
+                                                <input type="hidden" name="action" value="resolve">
+                                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Are you sure you want to dismiss this report?')">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="reports.php" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this post and all its reports? This action cannot be undone.');">
+                                                <input type="hidden" name="post_id" value="<?= $report['post_id'] ?>">
+                                                <input type="hidden" name="delete_post" value="1">
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash-alt"></i> Delete Post (ID: <?= $report['post_id'] ?>)
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -291,15 +418,59 @@ $reports = $stmt->get_result();
             });
     }
 
-    function confirmDelete(reportId) {
-        document.getElementById('deleteReportId').value = reportId;
-        new bootstrap.Modal(document.getElementById('deleteReportModal')).show();
+    function handleAction(reportId, action) {
+        console.log('handleAction called with:', { reportId, action });
+        
+        if (action === 'resolve' && !confirm('Are you sure you want to dismiss this report?')) {
+            console.log('User cancelled dismiss action');
+            return;
+        }
+        if (action === 'delete_post' && !confirm('Are you sure you want to delete this post and all its reports? This action cannot be undone.')) {
+            console.log('User cancelled delete action');
+            return;
+        }
+
+        console.log('Creating form for action:', action);
+        
+        // Create and submit form programmatically
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'reports.php';
+
+        const reportIdInput = document.createElement('input');
+        reportIdInput.type = 'hidden';
+        reportIdInput.name = 'report_id';
+        reportIdInput.value = reportId;
+
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = action;
+
+        form.appendChild(reportIdInput);
+        form.appendChild(actionInput);
+        document.body.appendChild(form);
+        
+        console.log('Submitting form with data:', {
+            report_id: reportId,
+            action: action
+        });
+        
+        form.submit();
     }
 
-    function confirmDismiss(reportId) {
-        document.getElementById('dismissReportId').value = reportId;
-        new bootstrap.Modal(document.getElementById('dismissReportModal')).show();
-    }
+    // Add error handling for form submissions
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Page loaded, initializing form handlers');
+        
+        // Add error handling for all forms
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                console.log('Form submitted:', this);
+                console.log('Form data:', new FormData(this));
+            });
+        });
+    });
 </script>
 </body>
 </html>

@@ -2,17 +2,21 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3">View Post</h1>
         <div>
-            <a href="posts.php" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Posts
+            <a href="<?= strpos($_SERVER['HTTP_REFERER'], 'reports.php') !== false ? 'reports.php' : 'posts.php' ?>" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back
             </a>
-            <?php if ($post['report_count'] > 0): ?>
+            <?php if (is_array($post) && isset($post['report_count']) && $post['report_count'] > 0): ?>
                 <a href="reports.php?post_id=<?= $post_id ?>" class="btn btn-warning">
                     <i class="fas fa-flag"></i> View Reports
                 </a>
             <?php endif; ?>
-            <button type="button" class="btn btn-danger" onclick="confirmDelete(<?= $post_id ?>)">
-                <i class="fas fa-trash"></i> Delete Post
-            </button>
+            <form method="POST" action="<?= strpos($_SERVER['HTTP_REFERER'], 'reports.php') !== false ? 'reports.php' : 'posts.php' ?>" class="d-inline">
+                <input type="hidden" name="post_id" value="<?= $post_id ?>">
+                <input type="hidden" name="delete_post" value="1">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this post? This action cannot be undone.')">
+                    <i class="fas fa-trash"></i> Delete Post
+                </button>
+            </form>
         </div>
     </div>
 
@@ -24,8 +28,8 @@
                 <div class="card-header py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="m-0 font-weight-bold text-primary">Post Content</h6>
-                        <span class="badge bg-<?= $post['report_count'] > 0 ? 'danger' : 'success' ?>">
-                            <?= $post['report_count'] ?> Reports
+                        <span class="badge bg-<?= (is_array($post) && isset($post['report_count']) && $post['report_count'] > 0) ? 'danger' : 'success' ?>">
+                            <?= is_array($post) && isset($post['report_count']) ? $post['report_count'] : 0 ?> Reports
                         </span>
                     </div>
                 </div>
@@ -36,17 +40,17 @@
                                 <i class="fas fa-user-circle fa-2x text-gray-300"></i>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">@<?= htmlspecialchars($post['username']) ?></h6>
-                                <small class="text-muted"><?= htmlspecialchars($post['email']) ?></small>
+                                <h6 class="mb-0">@<?= is_array($post) && isset($post['username']) ? htmlspecialchars($post['username']) : 'Unknown User' ?></h6>
+                                <small class="text-muted"><?= is_array($post) && isset($post['email']) ? htmlspecialchars($post['email']) : '' ?></small>
                             </div>
                             <div class="text-end">
                                 <small class="text-muted">
-                                    <?= date('M d, Y H:i', strtotime($post['created_at'])) ?>
+                                    <?= is_array($post) && isset($post['created_at']) ? date('M d, Y H:i', strtotime($post['created_at'])) : 'Unknown date' ?>
                                 </small>
                             </div>
                         </div>
                         <div class="post-content">
-                            <?= nl2br(htmlspecialchars($post['content'])) ?>
+                            <?= is_array($post) && isset($post['content']) ? nl2br(htmlspecialchars($post['content'])) : 'No content available' ?>
                         </div>
                         <?php if ($files->num_rows > 0): ?>
                             <div class="mt-3">
@@ -89,7 +93,7 @@
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        Comments (<?= $post['comment_count'] ?>)
+                        Comments (<?= is_array($post) && isset($post['comment_count']) ? $post['comment_count'] : 0 ?>)
                     </h6>
                 </div>
                 <div class="card-body">
@@ -123,15 +127,15 @@
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-sm-4">Post ID</dt>
-                        <dd class="col-sm-8"><?= $post['post_id'] ?></dd>
+                        <dd class="col-sm-8"><?= is_array($post) && isset($post['post_id']) ? $post['post_id'] : 'N/A' ?></dd>
 
                         <dt class="col-sm-4">Author</dt>
-                        <dd class="col-sm-8">@<?= htmlspecialchars($post['username']) ?></dd>
+                        <dd class="col-sm-8">@<?= is_array($post) && isset($post['username']) ? htmlspecialchars($post['username']) : 'Unknown User' ?></dd>
 
                         <dt class="col-sm-4">Community</dt>
                         <dd class="col-sm-8">
-                            <?php if ($post['community_name']): ?>
-                                <a href="communities.php?id=<?= $post['community_id'] ?>">
+                            <?php if (is_array($post) && isset($post['community_name']) && $post['community_name']): ?>
+                                <a href="communities.php?id=<?= is_array($post) && isset($post['community_id']) ? $post['community_id'] : '' ?>">
                                     <?= htmlspecialchars($post['community_name']) ?>
                                 </a>
                             <?php else: ?>
@@ -140,18 +144,18 @@
                         </dd>
 
                         <dt class="col-sm-4">Created</dt>
-                        <dd class="col-sm-8"><?= date('M d, Y H:i', strtotime($post['created_at'])) ?></dd>
+                        <dd class="col-sm-8"><?= is_array($post) && isset($post['created_at']) ? date('M d, Y H:i', strtotime($post['created_at'])) : 'Unknown date' ?></dd>
 
                         <dt class="col-sm-4">Updated</dt>
-                        <dd class="col-sm-8"><?= date('M d, Y H:i', strtotime($post['updated_at'])) ?></dd>
+                        <dd class="col-sm-8"><?= is_array($post) && isset($post['updated_at']) ? date('M d, Y H:i', strtotime($post['updated_at'])) : 'Unknown date' ?></dd>
 
                         <dt class="col-sm-4">Comments</dt>
-                        <dd class="col-sm-8"><?= $post['comment_count'] ?></dd>
+                        <dd class="col-sm-8"><?= is_array($post) && isset($post['comment_count']) ? $post['comment_count'] : 0 ?></dd>
 
                         <dt class="col-sm-4">Reports</dt>
                         <dd class="col-sm-8">
-                            <span class="badge bg-<?= $post['report_count'] > 0 ? 'danger' : 'success' ?>">
-                                <?= $post['report_count'] ?>
+                            <span class="badge bg-<?= (is_array($post) && isset($post['report_count']) && $post['report_count'] > 0) ? 'danger' : 'success' ?>">
+                                <?= is_array($post) && isset($post['report_count']) ? $post['report_count'] : 0 ?>
                             </span>
                         </dd>
                     </dl>
@@ -159,7 +163,7 @@
             </div>
 
             <!-- Reports Summary -->
-            <?php if ($post['report_count'] > 0): ?>
+            <?php if (is_array($post) && isset($post['report_count']) && $post['report_count'] > 0): ?>
                 <div class="card shadow mb-4">
                     <div class="card-header py-3">
                         <h6 class="m-0 font-weight-bold text-primary">Recent Reports</h6>
@@ -169,7 +173,7 @@
                             <?php 
                             $reports->data_seek(0);
                             $count = 0;
-                            while ($report = $reports->fetch_assoc() && $count < 5): 
+                            while (($report = $reports->fetch_assoc()) && $count < 5): 
                                 $count++;
                             ?>
                                 <div class="list-group-item">
@@ -180,7 +184,7 @@
                                         </small>
                                     </div>
                                     <p class="mb-1"><?= htmlspecialchars($report['reason']) ?></p>
-                                    <?php if ($report['details']): ?>
+                                    <?php if (isset($report['details']) && $report['details']): ?>
                                         <small class="text-muted"><?= htmlspecialchars($report['details']) ?></small>
                                     <?php endif; ?>
                                 </div>
@@ -196,7 +200,8 @@
 <script>
 function confirmDelete(postId) {
     if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-        window.location.href = `posts.php?action=delete&id=${postId}`;
+        const currentPage = window.location.pathname.includes('reports.php') ? 'reports.php' : 'posts.php';
+        window.location.href = `${currentPage}?action=delete&id=${postId}`;
     }
 }
 </script> 

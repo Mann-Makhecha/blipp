@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+// session_start();
 
 // Debugging: Check if $mysqli is properly initialized
 if (!isset($mysqli) || $mysqli->connect_error) {

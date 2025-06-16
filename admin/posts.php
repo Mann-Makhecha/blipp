@@ -1,4 +1,6 @@
 <?php
+// session_start();
+require_once '../includes/db.php'; // Corrected path if needed, ensure this is correct
 require_once 'includes/auth.php';
 
 // Debugging: Check if $mysqli is properly initialized
@@ -305,9 +307,13 @@ require_once 'includes/header.php';
                                 <a href="?view=post&id=<?= $post['post_id'] ?>" class="btn btn-sm btn-info">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(<?= $post['post_id'] ?>)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <form method="POST" action="posts.php" class="d-inline">
+                                    <input type="hidden" name="post_id" value="<?= $post['post_id'] ?>">
+                                    <input type="hidden" name="delete_post" value="1">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this post? This action cannot be undone.')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         <?php endwhile; ?>
@@ -325,4 +331,6 @@ function confirmDelete(postId) {
     }
 }
 </script>
+
+
 

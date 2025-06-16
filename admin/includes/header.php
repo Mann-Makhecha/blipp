@@ -32,7 +32,7 @@
             position: fixed;
             top: 0;
             right: 0;
-            left: var(--sidebar-width);
+            left: 0;
             z-index: 1000;
             padding: 0 1.5rem;
             display: flex;
@@ -51,12 +51,14 @@
             padding: 1rem;
             color: white;
             z-index: 1001;
+            transition: transform 0.3s ease;
         }
         
         .main-content {
             margin-left: var(--sidebar-width);
             margin-top: var(--header-height);
             padding: 2rem;
+            transition: margin-left 0.3s ease;
         }
         
         .nav-link {
@@ -143,6 +145,55 @@
             background: #fff3cd;
             color: #856404;
         }
+
+        /* Mobile Toggle Button */
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .admin-header {
+                left: 0;
+            }
+            
+            .sidebar-toggle {
+                display: block;
+            }
+        }
+
+        /* Small screen adjustments */
+        @media (max-width: 767.98px) {
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+            
+            .table-responsive {
+                margin-bottom: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -173,7 +224,10 @@
 
     <!-- Header -->
     <header class="admin-header">
-        <div>
+        <div class="d-flex align-items-center">
+            <button class="sidebar-toggle me-3">
+                <i class="fas fa-bars"></i>
+            </button>
             <h5 class="mb-0">Welcome, <?= htmlspecialchars($admin['username'] ?? 'Admin') ?></h5>
         </div>
         <div class="admin-dropdown">
@@ -190,4 +244,34 @@
     </header>
 
     <!-- Main Content -->
-    <main class="main-content"> 
+    <main class="main-content">
+
+    <script>
+        // Sidebar toggle functionality
+        document.querySelector('.sidebar-toggle').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('show');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            
+            if (window.innerWidth < 992 && 
+                !sidebar.contains(event.target) && 
+                !sidebarToggle.contains(event.target) && 
+                sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.querySelector('.sidebar');
+            if (window.innerWidth >= 992) {
+                sidebar.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html> 

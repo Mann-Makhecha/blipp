@@ -8,7 +8,7 @@
 </head>
 <body>
     <?php
-session_start();
+// session_start();
 require_once '../includes/db.php';
 require_once 'includes/auth.php';
 require_once 'includes/header.php';
@@ -277,9 +277,9 @@ $chart_data = array_values($chart_data);
     </div>
 </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
         // Initialize all tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -398,6 +398,6 @@ $chart_data = array_values($chart_data);
                 }
             });
         });
-    </script>
+</script>
 </body>
 </html>
