@@ -80,12 +80,11 @@ $suggested_users = [];
 if ($user_id && $mysqli && empty($search_query)) {
     try {
         $stmt = $mysqli->prepare("
-            SELECT u.user_id, u.username
+            SELECT u.user_id, u.username,
+                   CASE WHEN f.follower_id IS NOT NULL THEN 1 ELSE 0 END as is_following
             FROM users u
+            LEFT JOIN follows f ON u.user_id = f.followed_id AND f.follower_id = ?
             WHERE u.user_id != ?
-            AND u.user_id NOT IN (
-                SELECT followed_id FROM follows WHERE follower_id = ?
-            )
             ORDER BY RAND()
             LIMIT 5
         ");
@@ -255,7 +254,26 @@ function timeAgo($datetime) {
                                     </a>
                                     <div class="text-white small">@<?= htmlspecialchars($user['username']) ?></div>
                                 </div>
-                                <button class="btn btn-outline-primary btn-sm rounded-pill">Follow</button>
+                                <?php if ($user_id && $user['user_id'] != $user_id): ?>
+                                    <?php
+                                    // Check if current user is following this user
+                                    $follow_check = $mysqli->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
+                                    $follow_check->bind_param("ii", $user_id, $user['user_id']);
+                                    $follow_check->execute();
+                                    $is_following = $follow_check->get_result()->num_rows > 0;
+                                    $follow_check->close();
+                                    ?>
+                                    <button class="btn btn-sm rounded-pill follow-btn" 
+                                            data-user-id="<?= $user['user_id'] ?>"
+                                            data-following="<?= $is_following ? 1 : 0 ?>"
+                                            onclick="toggleFollow(<?= $user['user_id'] ?>, this)">
+                                        <?php if ($is_following): ?>
+                                            <span class="btn btn-secondary btn-sm rounded-pill">Following</span>
+                                        <?php else: ?>
+                                            <span class="btn btn-outline-primary btn-sm rounded-pill">Follow</span>
+                                        <?php endif; ?>
+                                    </button>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     <?php elseif ($active_tab === 'posts'): ?>
@@ -300,7 +318,18 @@ function timeAgo($datetime) {
                                     </a>
                                     <div class="text-white small">@<?= htmlspecialchars($user['username']) ?></div>
                                 </div>
-                                <button class="btn btn-outline-primary btn-sm rounded-pill">Follow</button>
+                                <?php if ($user_id && $user['user_id'] != $user_id): ?>
+                                    <button class="btn btn-sm rounded-pill follow-btn" 
+                                            data-user-id="<?= $user['user_id'] ?>"
+                                            data-following="<?= $user['is_following'] ?>"
+                                            onclick="toggleFollow(<?= $user['user_id'] ?>, this)">
+                                        <?php if ($user['is_following']): ?>
+                                            <span class="btn btn-secondary btn-sm rounded-pill">Following</span>
+                                        <?php else: ?>
+                                            <span class="btn btn-outline-primary btn-sm rounded-pill">Follow</span>
+                                        <?php endif; ?>
+                                    </button>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -317,5 +346,114 @@ function timeAgo($datetime) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Follow/Unfollow functionality
+        function toggleFollow(userId, button) {
+            const isFollowing = button.getAttribute('data-following') === '1';
+            const action = isFollowing ? 'unfollow' : 'follow';
+            
+            // Show loading state
+            const originalContent = button.innerHTML;
+            button.innerHTML = '<span class="btn btn-secondary btn-sm rounded-pill"><i class="fas fa-spinner fa-spin"></i></span>';
+            button.disabled = true;
+            
+            // Make AJAX request
+            fetch('follow_ajax.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `followed_id=${userId}&action=${action}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update button state
+                    if (action === 'follow') {
+                        button.setAttribute('data-following', '1');
+                        button.innerHTML = '<span class="btn btn-secondary btn-sm rounded-pill">Following</span>';
+                    } else {
+                        button.setAttribute('data-following', '0');
+                        button.innerHTML = '<span class="btn btn-outline-primary btn-sm rounded-pill">Follow</span>';
+                    }
+                    
+                    // Show success message
+                    showToast(data.message, 'success');
+                } else {
+                    // Restore original state on error
+                    button.innerHTML = originalContent;
+                    showToast(data.message || 'An error occurred', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                button.innerHTML = originalContent;
+                showToast('An error occurred while processing your request', 'error');
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+        }
+        
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            // Create toast container if it doesn't exist
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 9999;
+                    max-width: 300px;
+                `;
+                document.body.appendChild(toastContainer);
+            }
+            
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show`;
+            toast.style.cssText = `
+                margin-bottom: 10px;
+                padding: 10px 15px;
+                border-radius: 5px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Add CSS animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Add toast to container
+            toastContainer.appendChild(toast);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
