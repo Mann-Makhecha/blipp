@@ -9,25 +9,20 @@
 <body>
     <!-- Mobile Bottom Navigation -->
     <nav class="mobile-nav">
-        <a href="index.php" class="nav-link active">
+        <a href="index.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
             <i class="fas fa-house"></i>
-            <span>Home</span>
         </a>
-        <a href="explore.php" class="nav-link">
+        <a href="explore.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'explore.php' ? 'active' : ''; ?>">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <span>Explore</span>
         </a>
-        <a href="Communities.php" class="nav-link">
+        <a href="Communities.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'Communities.php' ? 'active' : ''; ?>">
             <i class="fas fa-users"></i>
-            <span>Communities</span>
         </a>
-        <a href="message.php" class="nav-link">
+        <a href="message.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'message.php' ? 'active' : ''; ?>">
             <i class="fas fa-envelope"></i>
-            <span>Messages</span>
         </a>
-        <a href="profile.php" class="nav-link">
+        <a href="profile.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : ''; ?>">
             <i class="fas fa-user"></i>
-            <span>Profile</span>
         </a>
     </nav>
 </body>

@@ -124,60 +124,6 @@ if ($user_id) {
       width: 100%;
       padding: 10px 20px;
     }
-
-    /* Mobile Bottom Navigation */
-    @media (max-width: 767px) {
-      .sidebar {
-        width: 100%;
-        height: auto;
-        position: fixed;
-        top: auto;
-        bottom: 0;
-        left: 0;
-        padding: 0;
-        border-top: 1px solid #333;
-        z-index: 1000;
-      }
-      .sidebar-header {
-        display: none;
-      }
-      .sidebar-nav {
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        padding: 5px 0;
-      }
-      .nav-item {
-        margin: 0;
-      }
-      .nav-link {
-        padding: 10px;
-        border-radius: 0;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        font-size: 0.9rem;
-      }
-      .nav-link i {
-        margin-right: 0;
-        font-size: 1.5rem;
-        width: auto;
-      }
-      .nav-link span {
-        display: none;
-      }
-      /* Hide the "Try blipp PRO" link on mobile */
-      .nav-item.pro-link {
-        display: none;
-      }
-      .profile-section, .logout-section {
-        display: none;
-      }
-      /* Adjust main content to avoid overlap with bottom nav */
-      body {
-        padding-bottom: 60px; /* Height of the bottom nav */
-      }
-    }
   </style>
 </head>
 <body class="bg-dark text-white vh-100">

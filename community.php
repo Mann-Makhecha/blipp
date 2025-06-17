@@ -161,13 +161,20 @@ if ($mysqli && $community_id > 0) {
     try {
         $stmt = $mysqli->prepare("
             SELECT p.post_id, p.content, p.upvotes, p.downvotes, p.views, p.created_at, 
-                   u.username, u.user_id
+                   u.username, u.user_id,
+                   c.community_id, c.name as community_name,
+                   " . ($user_id ? "(SELECT COUNT(*) FROM follows WHERE follower_id = ? AND followed_id = p.user_id) as is_following" : "0 as is_following") . "
             FROM posts p
             JOIN users u ON p.user_id = u.user_id
+            LEFT JOIN communities c ON p.community_id = c.community_id
             WHERE p.community_id = ?
             ORDER BY p.created_at DESC
         ");
-        $stmt->bind_param("i", $community_id);
+        if ($user_id) {
+            $stmt->bind_param("ii", $user_id, $community_id);
+        } else {
+            $stmt->bind_param("i", $community_id);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
         while ($post = $result->fetch_assoc()) {
@@ -248,6 +255,22 @@ if ($mysqli && $community_id > 0) {
             max-width: 100%;
             height: auto;
             margin-top: 10px;
+        }
+
+        .community-link {
+            color: #1d9bf0;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .community-link:hover {
+            color: #1a8cd8;
+            text-decoration: underline;
+        }
+
+        .community-link i {
+            margin-right: 0.25rem;
         }
 
         @media (max-width: 767px) {
@@ -340,13 +363,38 @@ if ($mysqli && $community_id > 0) {
                             <div class="post-card p-3">
                                 <div class="d-flex align-items-center mb-2">
                                     <i class="fas fa-user-circle fa-2x me-2" style="color: #666;"></i>
-                                    <div>
+                                    <div class="flex-grow-1">
                                         <a href="profile.php?user_id=<?= $post['user_id'] ?>" class="text-white text-decoration-none fw-bold">
                                             <?= htmlspecialchars($post['username']) ?>
                                         </a>
                                         <div class="text-white small">
                                             Posted on <?= date('F j, Y, g:i A', strtotime($post['created_at'])) ?>
+                                            <?php if ($post['community_id'] && $post['community_name'] && $post['community_id'] != $community_id): ?>
+                                                · <a href="community.php?community_id=<?= $post['community_id'] ?>" class="community-link">
+                                                    <i class="fas fa-users"></i> <?= htmlspecialchars($post['community_name']) ?>
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
+                                    </div>
+                                    <div class="ms-2">
+                                        <?php if ($user_id && $post['user_id'] == $user_id): ?>
+                                            <!-- Delete button for own posts -->
+                                            <form method="POST" action="delete_post.php" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this post? This action cannot be undone.')">
+                                                <input type="hidden" name="post_id" value="<?= $post['post_id'] ?>">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete Post">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        <?php elseif ($user_id && $post['user_id'] != $user_id): ?>
+                                            <!-- Follow/Unfollow button for other users -->
+                                            <form method="POST" action="follow_user.php" style="display: inline;">
+                                                <input type="hidden" name="followed_id" value="<?= $post['user_id'] ?>">
+                                                <button type="submit" class="btn btn-sm <?= $post['is_following'] ? 'btn-secondary' : 'btn-primary' ?>" title="<?= $post['is_following'] ? 'Unfollow' : 'Follow' ?> User">
+                                                    <i class="fas <?= $post['is_following'] ? 'fa-user-minus' : 'fa-user-plus' ?>"></i>
+                                                    <?= $post['is_following'] ? 'Unfollow' : 'Follow' ?>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <p><?= htmlspecialchars($post['content']) ?></p>

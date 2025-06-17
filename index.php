@@ -123,10 +123,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user_id) {
 // Random posts for "For You" (from all public communities and individual posts), latest first
 $for_you_query = $mysqli->query("
     SELECT 
-        p.post_id, p.content, p.created_at, p.upvotes, p.downvotes,
+        p.post_id, p.content, p.created_at, p.upvotes, p.downvotes, p.user_id,
         u.username,
         f.file_path,
-        (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.post_id) as comment_count
+        c.community_id, c.name as community_name,
+        (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.post_id) as comment_count,
+        " . ($user_id ? "(SELECT COUNT(*) FROM follows WHERE follower_id = $user_id AND followed_id = p.user_id) as is_following" : "0 as is_following") . "
     FROM posts p 
     JOIN users u ON p.user_id = u.user_id 
     LEFT JOIN communities c ON p.community_id = c.community_id 
@@ -139,13 +141,16 @@ $for_you_query = $mysqli->query("
 // Posts for "Following" (from communities the user is a member of), latest first
 $following_query = $mysqli->query("
     SELECT 
-        p.post_id, p.content, p.created_at, p.upvotes, p.downvotes,
+        p.post_id, p.content, p.created_at, p.upvotes, p.downvotes, p.user_id,
         u.username,
         f.file_path,
-        (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.post_id) as comment_count
+        c.community_id, c.name as community_name,
+        (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.post_id) as comment_count,
+        " . ($user_id ? "(SELECT COUNT(*) FROM follows WHERE follower_id = $user_id AND followed_id = p.user_id) as is_following" : "0 as is_following") . "
     FROM posts p 
     JOIN users u ON p.user_id = u.user_id 
     JOIN community_members cm ON p.community_id = cm.community_id 
+    LEFT JOIN communities c ON p.community_id = c.community_id 
     LEFT JOIN files f ON p.post_id = f.post_id
     WHERE cm.user_id = " . ($user_id ? $mysqli->real_escape_string($user_id) : 0) . " 
     ORDER BY p.created_at DESC 
@@ -474,6 +479,30 @@ function timeAgo($datetime) {
             font-size: 0.9rem;
         }
 
+        .post-card .user-info .post-actions {
+            margin-left: auto;
+        }
+
+        .post-card .delete-btn {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s ease;
+        }
+
+        .post-card .delete-btn:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+            transform: scale(1.05);
+        }
+
+        .post-card .delete-btn:focus {
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        }
+
         .post-card .post-content {
             font-size: 1.1rem;
             line-height: 1.5;
@@ -601,6 +630,48 @@ function timeAgo($datetime) {
   color: gray !important;
   opacity: 1; /* Firefox */
 }
+
+        .post-card .follow-btn {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .post-card .follow-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .post-card .follow-btn:focus {
+            box-shadow: 0 0 0 0.25rem rgba(29, 155, 240, 0.25);
+        }
+
+        .post-card .follow-btn.btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
+        .post-card .follow-btn.btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+
+        .post-card .community-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .post-card .community-link:hover {
+            color: var(--accent-primary-hover);
+            text-decoration: underline;
+        }
+
+        .post-card .community-link i {
+            margin-right: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -681,8 +752,35 @@ function timeAgo($datetime) {
                                         </div>
                                         <div class="user-details">
                                             <div class="username">@<?= htmlspecialchars($post['username']) ?></div>
-                                            <div class="timestamp"><?= timeAgo($post['created_at']) ?></div>
+                                            <div class="timestamp">
+                                                <?= timeAgo($post['created_at']) ?>
+                                                <?php if ($post['community_id'] && $post['community_name']): ?>
+                                                    · <a href="community.php?community_id=<?= $post['community_id'] ?>" class="community-link">
+                                                        <i class="fas fa-users"></i> <?= htmlspecialchars($post['community_name']) ?>
+                                                    </a>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
+                                        <?php if ($user_id && $post['user_id'] == $user_id): ?>
+                                            <div class="post-actions">
+                                                <form method="POST" action="delete_post.php" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this post? This action cannot be undone.')">
+                                                    <input type="hidden" name="post_id" value="<?= $post['post_id'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-danger delete-btn" title="Delete Post">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        <?php elseif ($user_id && $post['user_id'] != $user_id): ?>
+                                            <div class="post-actions">
+                                                <form method="POST" action="follow_user.php" style="display: inline;">
+                                                    <input type="hidden" name="followed_id" value="<?= $post['user_id'] ?>">
+                                                    <button type="submit" class="btn btn-sm <?= $post['is_following'] ? 'btn-secondary' : 'btn-primary' ?> follow-btn" title="<?= $post['is_following'] ? 'Unfollow' : 'Follow' ?> User">
+                                                        <i class="fas <?= $post['is_following'] ? 'fa-user-minus' : 'fa-user-plus' ?>"></i>
+                                                        <?= $post['is_following'] ? 'Unfollow' : 'Follow' ?>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="post-content"><?= htmlspecialchars($post['content'] ?? 'No content available') ?></div>
                                     <?php if ($post['file_path']): ?>
@@ -724,8 +822,35 @@ function timeAgo($datetime) {
                                             </div>
                                             <div class="user-details">
                                                 <div class="username">@<?= htmlspecialchars($post['username']) ?></div>
-                                                <div class="timestamp"><?= timeAgo($post['created_at']) ?></div>
+                                                <div class="timestamp">
+                                                    <?= timeAgo($post['created_at']) ?>
+                                                    <?php if ($post['community_id'] && $post['community_name']): ?>
+                                                        · <a href="community.php?community_id=<?= $post['community_id'] ?>" class="community-link">
+                                                            <i class="fas fa-users"></i> <?= htmlspecialchars($post['community_name']) ?>
+                                                        </a>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
+                                            <?php if ($post['user_id'] == $user_id): ?>
+                                                <div class="post-actions">
+                                                    <form method="POST" action="delete_post.php" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this post? This action cannot be undone.')">
+                                                        <input type="hidden" name="post_id" value="<?= $post['post_id'] ?>">
+                                                        <button type="submit" class="btn btn-sm btn-danger delete-btn" title="Delete Post">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            <?php elseif ($post['user_id'] != $user_id): ?>
+                                                <div class="post-actions">
+                                                    <form method="POST" action="follow_user.php" style="display: inline;">
+                                                        <input type="hidden" name="followed_id" value="<?= $post['user_id'] ?>">
+                                                        <button type="submit" class="btn btn-sm <?= $post['is_following'] ? 'btn-secondary' : 'btn-primary' ?> follow-btn" title="<?= $post['is_following'] ? 'Unfollow' : 'Follow' ?> User">
+                                                            <i class="fas <?= $post['is_following'] ? 'fa-user-minus' : 'fa-user-plus' ?>"></i>
+                                                            <?= $post['is_following'] ? 'Unfollow' : 'Follow' ?>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="post-content"><?= htmlspecialchars($post['content'] ?? 'No content available') ?></div>
                                         <?php if ($post['file_path']): ?>
@@ -832,6 +957,87 @@ function timeAgo($datetime) {
                     this.value = this.value.substring(0, 280);
                 }
             });
+        }
+
+        // AJAX Follow functionality
+        document.addEventListener('submit', function(e) {
+            if (e.target.action && e.target.action.includes('follow_user.php')) {
+                e.preventDefault();
+                
+                const form = e.target;
+                const button = form.querySelector('button[type="submit"]');
+                const originalText = button.innerHTML;
+                
+                // Disable button and show loading state
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                
+                const formData = new FormData(form);
+                
+                fetch('follow_ajax.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update button appearance
+                        button.className = `btn btn-sm ${data.button_class} follow-btn`;
+                        button.innerHTML = `<i class="fas ${data.icon_class}"></i> ${data.button_text}`;
+                        
+                        // Show success message
+                        showToast(data.message, 'success');
+                    } else {
+                        // Show error message
+                        showToast(data.message, 'error');
+                        // Re-enable button
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('An error occurred. Please try again.', 'error');
+                    // Re-enable button
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
+            }
+        });
+
+        // Toast notification function
+        function showToast(message, type) {
+            const toastContainer = document.createElement('div');
+            toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            
+            const toast = document.createElement('div');
+            toast.className = `toast show`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            
+            toast.innerHTML = `
+                <div class="toast-header ${bgClass} text-white">
+                    <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
+                    <button type="button" class="btn-close btn-close-white" onclick="this.closest('.position-fixed').remove()"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            document.body.appendChild(toastContainer);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (toastContainer.parentNode) {
+                    toastContainer.remove();
+                }
+            }, 3000);
         }
     </script>
 

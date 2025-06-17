@@ -3,8 +3,8 @@ session_start();
 require_once 'includes/db.php';
 
 // Check if user is logged in
-$current_user_id = $_SESSION['user_id'] ?? null;
-if (!isset($current_user_id)) {
+$user_id = $_SESSION['user_id'] ?? null;
+if (!isset($user_id)) {
     header("Location: login.php");
     exit();
 }
@@ -12,8 +12,8 @@ if (!isset($current_user_id)) {
 include 'includes/checklogin.php';
 
 // Determine whose profile to display (self or another user)
-$profile_user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $current_user_id;
-$is_own_profile = $profile_user_id === $current_user_id;
+$profile_user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $user_id;
+$is_own_profile = $profile_user_id === $user_id;
 
 // Database migrations
 // Add bio column
@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_action']) && !
             INSERT INTO follows (follower_id, followed_id, followed_at) 
             VALUES (?, ?, NOW())
         ");
-        $follow_stmt->bind_param("ii", $current_user_id, $profile_user_id);
+        $follow_stmt->bind_param("ii", $user_id, $profile_user_id);
         $follow_stmt->execute();
         $follow_stmt->close();
     } elseif ($action === 'unfollow') {
@@ -162,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_action']) && !
             DELETE FROM follows 
             WHERE follower_id = ? AND followed_id = ?
         ");
-        $unfollow_stmt->bind_param("ii", $current_user_id, $profile_user_id);
+        $unfollow_stmt->bind_param("ii", $user_id, $profile_user_id);
         $unfollow_stmt->execute();
         $unfollow_stmt->close();
     }
@@ -176,7 +176,7 @@ if (!$is_own_profile) {
         FROM follows 
         WHERE follower_id = ? AND followed_id = ?
     ");
-    $follow_check_stmt->bind_param("ii", $current_user_id, $profile_user_id);
+    $follow_check_stmt->bind_param("ii", $user_id, $profile_user_id);
     $follow_check_stmt->execute();
     $is_following = $follow_check_stmt->get_result()->num_rows > 0;
     $follow_check_stmt->close();
@@ -235,14 +235,16 @@ $offset = ($page - 1) * $posts_per_page;
 
 $posts_stmt = $mysqli->prepare("
     SELECT 
-        p.post_id, p.title, p.content, p.created_at, p.upvotes, p.downvotes, p.views,
+        p.post_id, p.title, p.content, p.created_at, p.upvotes, p.downvotes, p.views, p.user_id,
         u.username,
         f.file_path,
+        c.community_id, c.name as community_name,
         GROUP_CONCAT(h.hashtag) as hashtags,
         (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.post_id) as comment_count
     FROM posts p 
     JOIN users u ON p.user_id = u.user_id 
     LEFT JOIN files f ON p.post_id = f.post_id 
+    LEFT JOIN communities c ON p.community_id = c.community_id
     LEFT JOIN posts_hashtags ph ON p.post_id = ph.post_id 
     LEFT JOIN hashtags h ON ph.hashtag_id = h.hashtag_id
     WHERE p.user_id = ?
@@ -256,6 +258,18 @@ $posts_result = $posts_stmt->get_result();
 $posts = [];
 while ($row = $posts_result->fetch_assoc()) {
     $row['hashtags'] = $row['hashtags'] ? explode(',', $row['hashtags']) : [];
+    
+    // Check if current user is following this post's author
+    if (isset($user_id) && $user_id && $user_id != $row['user_id']) {
+        $follow_check_stmt = $mysqli->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
+        $follow_check_stmt->bind_param("ii", $user_id, $row['user_id']);
+        $follow_check_stmt->execute();
+        $row['is_following'] = $follow_check_stmt->get_result()->num_rows > 0;
+        $follow_check_stmt->close();
+    } else {
+        $row['is_following'] = false;
+    }
+    
     $posts[] = $row;
 }
 $posts_stmt->close();
@@ -283,6 +297,16 @@ while ($row = $communities_result->fetch_assoc()) {
     $communities[] = $row;
 }
 $communities_stmt->close();
+
+// Check if current user is following the profile user
+$is_following_profile = false;
+if ($user_id && $user_id != $profile_user_id) {
+    $follow_check_stmt = $mysqli->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
+    $follow_check_stmt->bind_param("ii", $user_id, $profile_user_id);
+    $follow_check_stmt->execute();
+    $is_following_profile = $follow_check_stmt->get_result()->num_rows > 0;
+    $follow_check_stmt->close();
+}
 
 // Function to format time ago
 function timeAgo($datetime) {
@@ -645,6 +669,44 @@ function timeAgo($datetime) {
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-secondary);
         }
+
+        .post-card .follow-btn.btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+
+        .profile-card a {
+            color: var(--text-primary);
+            transition: color 0.3s ease;
+        }
+
+        .profile-card a:hover {
+            color: var(--accent-primary);
+        }
+
+        .profile-card .btn {
+            transition: all 0.3s ease;
+        }
+
+        .profile-card .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .community-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .community-link:hover {
+            color: var(--accent-primary-hover);
+            text-decoration: underline;
+        }
+
+        .community-link i {
+            margin-right: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -662,36 +724,44 @@ function timeAgo($datetime) {
                         <?php else: ?>
                             <i class="fas fa-user-circle profile-icon me-3" aria-hidden="true"></i>
                         <?php endif; ?>
-                        <div>
+                        <div class="flex-grow-1">
                             <h2 class="mb-0">@<?= htmlspecialchars($user['username']) ?></h2>
                             <?php if ($user['name']): ?>
                                 <p class="text-secondary mb-0"><?= htmlspecialchars($user['name']) ?></p>
                             <?php endif; ?>
                             <p class="text-secondary mb-0">Joined <?= (new DateTime($user['created_at']))->format('F Y') ?></p>
                         </div>
+                        <?php if (!$is_own_profile && $user_id): ?>
+                            <div class="ms-3">
+                                <form method="POST" action="follow_user.php" style="display: inline;">
+                                    <input type="hidden" name="followed_id" value="<?= $profile_user_id ?>">
+                                    <button type="submit" class="btn <?= $is_following_profile ? 'btn-secondary' : 'btn-primary' ?>">
+                                        <i class="fas <?= $is_following_profile ? 'fa-user-minus' : 'fa-user-plus' ?>"></i>
+                                        <?= $is_following_profile ? 'Unfollow' : 'Follow' ?>
+                                    </button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     <p class="mb-3"><?= htmlspecialchars($user['bio'] ?? 'No bio available') ?></p>
                     <div class="d-flex gap-3 mb-3">
-                        <span><strong><?= $followers_count ?></strong> Followers</span>
-                        <span><strong><?= $following_count ?></strong> Following</span>
+                        <a href="followers.php?user_id=<?= $profile_user_id ?>&type=followers" class="text-decoration-none">
+                            <span><strong><?= $followers_count ?></strong> Followers</span>
+                        </a>
+                        <a href="followers.php?user_id=<?= $profile_user_id ?>&type=following" class="text-decoration-none">
+                            <span><strong><?= $following_count ?></strong> Following</span>
+                        </a>
                         <span><strong><?= $user['points'] ?></strong> Points</span>
                         <span><strong><?= $user['profile_views'] ?></strong> Profile Views</span>
                     </div>
                     <?php if ($user['is_premium'] && $user['premium_until'] > date('Y-m-d H:i:s')): ?>
                         <span class="badge bg-warning text-dark mb-3">Premium Member</span>
                     <?php endif; ?>
-                    <div class="d-flex gap-2">
-                        <?php if ($is_own_profile): ?>
+                    <?php if ($is_own_profile): ?>
+                        <div class="d-flex gap-2">
                             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">Edit Profile</button>
-                        <?php else: ?>
-                            <form method="POST">
-                                <input type="hidden" name="follow_action" value="<?= $is_following ? 'unfollow' : 'follow' ?>">
-                                <button type="submit" class="btn btn-follow">
-                                    <?= $is_following ? 'Unfollow' : 'Follow' ?>
-                                </button>
-                            </form>
-                        <?php endif; ?>
-                    </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
 
@@ -818,12 +888,41 @@ function timeAgo($datetime) {
                 <?php if (!empty($posts)): ?>
                     <?php foreach ($posts as $post): ?>
                         <div class="post-card">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-user-circle profile-icon me-3" aria-hidden="true"></i>
-                                <div class="user-info d-flex align-items-center gap-3">
-                                    <span class="username">@<?= htmlspecialchars($post['username']) ?></span>
-                                    <span class="timestamp"><?= timeAgo($post['created_at']) ?></span>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user-circle profile-icon me-3" aria-hidden="true"></i>
+                                    <div class="user-info d-flex align-items-center gap-3">
+                                        <span class="username">@<?= htmlspecialchars($post['username']) ?></span>
+                                        <span class="timestamp">
+                                            <?= timeAgo($post['created_at']) ?>
+                                            <?php if ($post['community_id'] && $post['community_name']): ?>
+                                                · <a href="community.php?community_id=<?= $post['community_id'] ?>" class="community-link">
+                                                    <i class="fas fa-users"></i> <?= htmlspecialchars($post['community_name']) ?>
+                                                </a>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
                                 </div>
+                                <?php if ($user_id && $post['user_id'] == $user_id): ?>
+                                    <div class="post-actions">
+                                        <form method="POST" action="delete_post.php" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this post? This action cannot be undone.')">
+                                            <input type="hidden" name="post_id" value="<?= $post['post_id'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete Post">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                <?php elseif ($user_id && $post['user_id'] != $user_id): ?>
+                                    <div class="post-actions">
+                                        <form method="POST" action="follow_user.php" style="display: inline;">
+                                            <input type="hidden" name="followed_id" value="<?= $post['user_id'] ?>">
+                                            <button type="submit" class="btn btn-sm <?= $post['is_following'] ? 'btn-secondary' : 'btn-primary' ?>" title="<?= $post['is_following'] ? 'Unfollow' : 'Follow' ?> User">
+                                                <i class="fas <?= $post['is_following'] ? 'fa-user-minus' : 'fa-user-plus' ?>"></i>
+                                                <?= $post['is_following'] ? 'Unfollow' : 'Follow' ?>
+                                            </button>
+                                        </form>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <div class="post-title"><?= htmlspecialchars($post['title']) ?></div>
                             <?php if ($post['content']): ?>
