@@ -365,7 +365,22 @@ if ($mysqli && $community_id > 0) {
                                     <i class="fas fa-user-circle fa-2x me-2" style="color: #666;"></i>
                                     <div class="flex-grow-1">
                                         <a href="profile.php?user_id=<?= $post['user_id'] ?>" class="text-white text-decoration-none fw-bold">
-                                            <?= htmlspecialchars($post['username']) ?>
+                                            @<?= htmlspecialchars($post['username']) ?>
+                                            <?php if ($post['user_id']): ?>
+                                                <?php
+                                                // Check if user has verification badge
+                                                $verify_check = $mysqli->prepare("
+                                                    SELECT 1 FROM user_badges ub 
+                                                    JOIN badges b ON ub.badge_id = b.badge_id 
+                                                    WHERE ub.user_id = ? AND b.name = 'Verified'
+                                                ");
+                                                $verify_check->bind_param("i", $post['user_id']);
+                                                $verify_check->execute();
+                                                if ($verify_check->get_result()->num_rows > 0): ?>
+                                                    <i class="fas fa-check-circle text-primary ms-1" title="Verified Account" style="font-size: 0.9rem;"></i>
+                                                <?php endif; ?>
+                                                <?php $verify_check->close(); ?>
+                                            <?php endif; ?>
                                         </a>
                                         <div class="text-white small">
                                             Posted on <?= date('F j, Y, g:i A', strtotime($post['created_at'])) ?>

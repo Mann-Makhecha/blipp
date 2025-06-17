@@ -751,7 +751,24 @@ function timeAgo($datetime) {
                                             <i class="fas fa-user"></i>
                                         </div>
                                         <div class="user-details">
-                                            <div class="username">@<?= htmlspecialchars($post['username']) ?></div>
+                                            <div class="username">
+                                                @<?= htmlspecialchars($post['username']) ?>
+                                                <?php if ($post['user_id']): ?>
+                                                    <?php
+                                                    // Check if user has verification badge
+                                                    $verify_check = $mysqli->prepare("
+                                                        SELECT 1 FROM user_badges ub 
+                                                        JOIN badges b ON ub.badge_id = b.badge_id 
+                                                        WHERE ub.user_id = ? AND b.name = 'Verified'
+                                                    ");
+                                                    $verify_check->bind_param("i", $post['user_id']);
+                                                    $verify_check->execute();
+                                                    if ($verify_check->get_result()->num_rows > 0): ?>
+                                                        <i class="fas fa-check-circle text-primary ms-1" title="Verified Account" style="font-size: 0.9rem;"></i>
+                                                    <?php endif; ?>
+                                                    <?php $verify_check->close(); ?>
+                                                <?php endif; ?>
+                                            </div>
                                             <div class="timestamp">
                                                 <?= timeAgo($post['created_at']) ?>
                                                 <?php if ($post['community_id'] && $post['community_name']): ?>
@@ -821,7 +838,24 @@ function timeAgo($datetime) {
                                                 <i class="fas fa-user"></i>
                                             </div>
                                             <div class="user-details">
-                                                <div class="username">@<?= htmlspecialchars($post['username']) ?></div>
+                                                <div class="username">
+                                                    @<?= htmlspecialchars($post['username']) ?>
+                                                    <?php if ($post['user_id']): ?>
+                                                        <?php
+                                                        // Check if user has verification badge
+                                                        $verify_check = $mysqli->prepare("
+                                                            SELECT 1 FROM user_badges ub 
+                                                            JOIN badges b ON ub.badge_id = b.badge_id 
+                                                            WHERE ub.user_id = ? AND b.name = 'Verified'
+                                                        ");
+                                                        $verify_check->bind_param("i", $post['user_id']);
+                                                        $verify_check->execute();
+                                                        if ($verify_check->get_result()->num_rows > 0): ?>
+                                                            <i class="fas fa-check-circle text-primary ms-1" title="Verified Account" style="font-size: 0.9rem;"></i>
+                                                        <?php endif; ?>
+                                                        <?php $verify_check->close(); ?>
+                                                    <?php endif; ?>
+                                                </div>
                                                 <div class="timestamp">
                                                     <?= timeAgo($post['created_at']) ?>
                                                     <?php if ($post['community_id'] && $post['community_name']): ?>

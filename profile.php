@@ -725,7 +725,16 @@ function timeAgo($datetime) {
                             <i class="fas fa-user-circle profile-icon me-3" aria-hidden="true"></i>
                         <?php endif; ?>
                         <div class="flex-grow-1">
-                            <h2 class="mb-0">@<?= htmlspecialchars($user['username']) ?></h2>
+                            <h2 class="mb-0">
+                                @<?= htmlspecialchars($user['username']) ?>
+                                <?php if (!empty($badges)): ?>
+                                    <?php foreach ($badges as $badge): ?>
+                                        <?php if ($badge['name'] === 'Verified'): ?>
+                                            <i class="fas fa-check-circle text-primary ms-2" title="Verified Account" style="font-size: 1.2rem;"></i>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </h2>
                             <?php if ($user['name']): ?>
                                 <p class="text-secondary mb-0"><?= htmlspecialchars($user['name']) ?></p>
                             <?php endif; ?>
