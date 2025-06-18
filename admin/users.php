@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $badge_check = $mysqli->prepare("SELECT badge_id FROM badges WHERE name = 'Verified'");
                     $badge_check->execute();
                     $badge_result = $badge_check->get_result();
-                    
+
                     $verification_badge_id = null;
                     if ($badge_result->num_rows === 0) {
                         // Create verification badge
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $verification_badge_id = $badge_result->fetch_assoc()['badge_id'];
                     }
                     $badge_check->close();
-                    
+
                     // Check if user already has verification badge
                     $user_badge_check = $mysqli->prepare("
                         SELECT user_badge_id FROM user_badges 
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ");
                     $user_badge_check->bind_param("ii", $user_id, $verification_badge_id);
                     $user_badge_check->execute();
-                    
+
                     if ($user_badge_check->get_result()->num_rows === 0) {
                         // Award verification badge to user
                         $user_badge_insert = $mysqli->prepare("
@@ -73,12 +73,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ");
                         $user_badge_insert->bind_param("ii", $user_id, $verification_badge_id);
                         $user_badge_insert->execute();
-                        
+
                         // Add 10,000 points
                         $points_update = $mysqli->prepare("UPDATE users SET points = points + 10000 WHERE user_id = ?");
                         $points_update->bind_param("i", $user_id);
                         $points_update->execute();
-                        
+
                         // Record point transaction
                         $transaction = $mysqli->prepare("
                             INSERT INTO point_transactions (user_id, points, description, transaction_date) 
@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ");
                         $transaction->bind_param("i", $user_id);
                         $transaction->execute();
-                        
+
                         $mysqli->commit();
                         $_SESSION['success_message'] = "User verified successfully with blue tick and 10,000 points!";
                     } else {
@@ -108,10 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $badge_check = $mysqli->prepare("SELECT badge_id FROM badges WHERE name = 'Verified'");
                     $badge_check->execute();
                     $badge_result = $badge_check->get_result();
-                    
+
                     if ($badge_result->num_rows > 0) {
                         $verification_badge_id = $badge_result->fetch_assoc()['badge_id'];
-                        
+
                         // Remove verification badge from user
                         $user_badge_delete = $mysqli->prepare("
                             DELETE FROM user_badges 
@@ -119,12 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ");
                         $user_badge_delete->bind_param("ii", $user_id, $verification_badge_id);
                         $user_badge_delete->execute();
-                        
+
                         // Deduct 10,000 points (if they have enough)
                         $points_update = $mysqli->prepare("UPDATE users SET points = GREATEST(points - 10000, 0) WHERE user_id = ?");
                         $points_update->bind_param("i", $user_id);
                         $points_update->execute();
-                        
+
                         // Record point transaction
                         $transaction = $mysqli->prepare("
                             INSERT INTO point_transactions (user_id, points, description, transaction_date) 
@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ");
                         $transaction->bind_param("i", $user_id);
                         $transaction->execute();
-                        
+
                         $mysqli->commit();
                         $_SESSION['success_message'] = "User verification revoked successfully!";
                     } else {
@@ -194,7 +194,7 @@ $users = $stmt->get_result();
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Users Management</h1>
         <div>
-            
+
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
                 <i class="fas fa-plus"></i> Add User
             </button>
@@ -401,4 +401,5 @@ $users = $stmt->get_result();
     }
 </script>
 </body>
+
 </html>

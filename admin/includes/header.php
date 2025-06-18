@@ -216,32 +216,25 @@
             <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'communities.php' ? 'active' : '' ?>" href="communities.php">
                 <i class="fas fa-users-cog"></i> Communities
             </a>
-            <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'settings.php' ? 'active' : '' ?>" href="settings.php">
-                <i class="fas fa-cog"></i> Settings
-            </a>
+           
         </nav>
     </div>
 
     <!-- Header -->
     <header class="admin-header">
-        <div class="d-flex align-items-center">
-            <button class="sidebar-toggle me-3">
-                <i class="fas fa-bars"></i>
+        <button class="sidebar-toggle" aria-label="Toggle sidebar">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="h4 mb-0">Admin Dashboard</h1>
+        <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                Admin
             </button>
-            <h5 class="mb-0">Welcome, <?= htmlspecialchars($admin['username'] ?? 'Admin') ?></h5>
-        </div>
-        <div class="admin-dropdown">
-            <button class="btn btn-link text-white dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="fas fa-user-circle"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user"></i> Profile</a></li>
-                <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog"></i> Settings</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
+                <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a></li>
+                <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
-        </div>
-    </header>
+        </div></header>
 
     <!-- Main Content -->
     <main class="main-content">
