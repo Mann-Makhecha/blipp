@@ -27,7 +27,7 @@ if ($user_id == $followed_id) {
 }
 
 // Check if the user to follow exists
-$stmt = $mysqli->prepare("SELECT user_id, username FROM users WHERE user_id = ? AND is_active = 1");
+$stmt = $conn->prepare("SELECT user_id, username FROM users WHERE user_id = ? AND is_active = 1");
 $stmt->bind_param("i", $followed_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -41,7 +41,7 @@ $followed_user = $result->fetch_assoc();
 $stmt->close();
 
 // Check if already following
-$stmt = $mysqli->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
+$stmt = $conn->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
 $stmt->bind_param("ii", $user_id, $followed_id);
 $stmt->execute();
 $is_following = $stmt->get_result()->num_rows > 0;
@@ -50,7 +50,7 @@ $stmt->close();
 // Handle follow/unfollow action
 if ($is_following) {
     // Unfollow
-    $stmt = $mysqli->prepare("DELETE FROM follows WHERE follower_id = ? AND followed_id = ?");
+    $stmt = $conn->prepare("DELETE FROM follows WHERE follower_id = ? AND followed_id = ?");
     $stmt->bind_param("ii", $user_id, $followed_id);
     
     if ($stmt->execute()) {
@@ -68,12 +68,12 @@ if ($is_following) {
     $stmt->close();
 } else {
     // Follow
-    $stmt = $mysqli->prepare("INSERT INTO follows (follower_id, followed_id, followed_at) VALUES (?, ?, NOW())");
+    $stmt = $conn->prepare("INSERT INTO follows (follower_id, followed_id, followed_at) VALUES (?, ?, NOW())");
     $stmt->bind_param("ii", $user_id, $followed_id);
     
     if ($stmt->execute()) {
         // Create notification for the followed user
-        $notification_stmt = $mysqli->prepare("
+        $notification_stmt = $conn->prepare("
             INSERT INTO notifications (user_id, type, content, reference_id, created_at) 
             VALUES (?, 'follow', ?, ?, NOW())
         ");
@@ -96,5 +96,5 @@ if ($is_following) {
     $stmt->close();
 }
 
-$mysqli->close();
+$conn->close();
 ?> 

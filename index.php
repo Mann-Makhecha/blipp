@@ -4,7 +4,7 @@ require_once 'includes/db.php';
 require_once 'includes/settings.php';
 
 // Check if user is logged in
-$user_id = $_SESSION['user_id'] ?? null;
+$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 
 // Redirect to login if not logged in
 include 'includes/checklogin.php';
@@ -12,13 +12,14 @@ include 'includes/checklogin.php';
 // Fetch communities the user is a member of (for the compose box dropdown)
 $communities = [];
 if ($user_id) {
-    $communities_stmt = $mysqli->prepare("
+    $communities_stmt = $conn->prepare("
         SELECT c.community_id, c.name 
         FROM communities c 
         JOIN community_members cm ON c.community_id = cm.community_id 
         WHERE cm.user_id = ?
     ");
-    $communities_stmt->bind_param("i", $user_id);
+    $param_user_id = $user_id;
+    $communities_stmt->bind_param("i", $param_user_id);
     $communities_stmt->execute();
     $communities_result = $communities_stmt->get_result();
     while ($row = $communities_result->fetch_assoc()) {
@@ -41,12 +42,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user_id) {
         $errors[] = "Post cannot exceed 280 characters.";
     }
     if ($community_id) {
-        $stmt = $mysqli->prepare("
+        $stmt = $conn->prepare("
             SELECT 1 
             FROM community_members 
             WHERE community_id = ? AND user_id = ?
         ");
-        $stmt->bind_param("ii", $community_id, $user_id);
+        $param_community_id = $community_id;
+        $param_user_id = $user_id;
+        $stmt->bind_param("ii", $param_community_id, $param_user_id);
         $stmt->execute();
         if ($stmt->get_result()->num_rows === 0) {
             $errors[] = "Invalid community or you are not a member.";
@@ -82,24 +85,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user_id) {
 
     // Insert post into database
     if (empty($errors)) {
-        $stmt = $mysqli->prepare("
+        $stmt = $conn->prepare("
             INSERT INTO posts (community_id, user_id, content, created_at, updated_at, upvotes, downvotes)
             VALUES (?, ?, ?, NOW(), NOW(), 0, 0)
         ");
-        if ($community_id === null) {
-            $stmt->bind_param("iis", $community_id, $user_id, $content);
-        } else {
-            $stmt->bind_param("iis", $community_id, $user_id, $content);
-        }
+        
+        // Create variables for bind_param
+        $param_community_id = $community_id;
+        $param_user_id = $user_id;
+        $param_content = $content;
+        
+        $stmt->bind_param("iis", $param_community_id, $param_user_id, $param_content);
+        
         if ($stmt->execute()) {
-            $post_id = $mysqli->insert_id;
+            $post_id = $conn->insert_id;
 
             // Insert file if uploaded
             if ($file_path) {
                 $file_name = $file['name'];
                 $file_type = $file['type'];
                 $file_size = $file['size'];
-                $file_stmt = $mysqli->prepare("
+                $file_stmt = $conn->prepare("
                     INSERT INTO files (post_id, file_name, file_path, file_type, file_size, uploaded_at)
                     VALUES (?, ?, ?, ?, ?, NOW())
                 ");
@@ -120,54 +126,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user_id) {
     }
 }
 
-// Random posts for "For You" (from all public communities and individual posts), latest first
-$for_you_query = $mysqli->query("
-    SELECT 
-        p.post_id, p.content, p.created_at, p.upvotes, p.downvotes, p.user_id,
-        u.username,
-        f.file_path,
-        c.community_id, c.name as community_name,
-        (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.post_id) as comment_count,
-        " . ($user_id ? "(SELECT COUNT(*) FROM follows WHERE follower_id = $user_id AND followed_id = p.user_id) as is_following" : "0 as is_following") . "
-    FROM posts p 
-    JOIN users u ON p.user_id = u.user_id 
-    LEFT JOIN communities c ON p.community_id = c.community_id 
-    LEFT JOIN files f ON p.post_id = f.post_id
-    WHERE c.is_private = 0 OR p.community_id IS NULL
-    ORDER BY p.created_at DESC 
+// Get posts from communities the user follows
+$following_query = $conn->prepare("
+    SELECT p.*, u.username, 
+           (SELECT COUNT(*) FROM post_votes WHERE post_id = p.post_id AND vote_type = 1) as upvotes,
+           (SELECT COUNT(*) FROM comments WHERE post_id = p.post_id) as comment_count,
+           (SELECT vote_type FROM post_votes WHERE post_id = p.post_id AND user_id = ?) as user_vote
+    FROM posts p
+    JOIN users u ON p.user_id = u.user_id
+    JOIN community_members cm ON p.community_id = cm.community_id
+    WHERE cm.user_id = ?
+    ORDER BY p.created_at DESC
     LIMIT 10
 ");
 
-// Posts for "Following" (from communities the user is a member of), latest first
-$following_query = $mysqli->query("
-    SELECT 
-        p.post_id, p.content, p.created_at, p.upvotes, p.downvotes, p.user_id,
-        u.username,
-        f.file_path,
-        c.community_id, c.name as community_name,
-        (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.post_id) as comment_count,
-        " . ($user_id ? "(SELECT COUNT(*) FROM follows WHERE follower_id = $user_id AND followed_id = p.user_id) as is_following" : "0 as is_following") . "
-    FROM posts p 
-    JOIN users u ON p.user_id = u.user_id 
-    JOIN community_members cm ON p.community_id = cm.community_id 
-    LEFT JOIN communities c ON p.community_id = c.community_id 
-    LEFT JOIN files f ON p.post_id = f.post_id
-    WHERE cm.user_id = " . ($user_id ? $mysqli->real_escape_string($user_id) : 0) . " 
-    ORDER BY p.created_at DESC 
+if ($user_id) {
+    $param_user_id = $user_id;
+    $following_query->bind_param("ii", $param_user_id, $param_user_id);
+    $following_query->execute();
+    $following_result = $following_query->get_result();
+}
+
+// Get random posts for "For You" section
+$for_you_query = $conn->prepare("
+    SELECT p.*, u.username, 
+           (SELECT COUNT(*) FROM post_votes WHERE post_id = p.post_id AND vote_type = 1) as upvotes,
+           (SELECT COUNT(*) FROM comments WHERE post_id = p.post_id) as comment_count,
+           (SELECT vote_type FROM post_votes WHERE post_id = p.post_id AND user_id = ?) as user_vote
+    FROM posts p
+    JOIN users u ON p.user_id = u.user_id
+    WHERE p.community_id IS NULL
+    ORDER BY RAND()
     LIMIT 10
 ");
 
-// Add this after the session_start() at the top of the file
+$param_user_id = $user_id ?? 0;
+$for_you_query->bind_param("i", $param_user_id);
+$for_you_query->execute();
+$for_you_result = $for_you_query->get_result();
+
+// Handle post reporting
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['report_post'])) {
     $post_id = $_POST['post_id'] ?? null;
     $reason = $_POST['reason'] ?? '';
     
     if ($post_id && $user_id) {
-        $stmt = $mysqli->prepare("
+        $stmt = $conn->prepare("
             INSERT INTO post_reports (post_id, reporter_id, reason, created_at)
             VALUES (?, ?, ?, NOW())
         ");
-        $stmt->bind_param("iis", $post_id, $user_id, $reason);
+        $param_post_id = $post_id;
+        $param_user_id = $user_id;
+        $param_reason = $reason;
+        $stmt->bind_param("iis", $param_post_id, $param_user_id, $param_reason);
         
         if ($stmt->execute()) {
             $_SESSION['success_message'] = "Post has been reported successfully.";
@@ -194,6 +205,23 @@ function timeAgo($datetime) {
     if ($interval->h > 0) return $interval->h . 'h ago';
     if ($interval->i > 0) return $interval->i . 'm ago';
     return $interval->s . 's ago';
+}
+
+// Function to format timestamp
+function formatTimeAgo($timestamp) {
+    $time = strtotime($timestamp);
+    $now = time();
+    $diff = $now - $time;
+    
+    if ($diff < 60) {
+        return $diff . 's';
+    } elseif ($diff < 3600) {
+        return floor($diff / 60) . 'm';
+    } elseif ($diff < 86400) {
+        return floor($diff / 3600) . 'h';
+    } else {
+        return floor($diff / 86400) . 'd';
+    }
 }
 ?>
 
@@ -550,17 +578,6 @@ function timeAgo($datetime) {
         .post-card .engagement-btn:hover {
             color: var(--accent-primary);
             background: rgba(29, 155, 240, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .post-card .engagement-btn i {
-            font-size: 1.1rem;
-            transition: transform 0.2s ease;
-            line-height: 1;
-        }
-
-        .post-card .engagement-btn:hover i {
-            transform: scale(1.1);
         }
 
         .post-card .engagement-btn.liked {
@@ -579,47 +596,97 @@ function timeAgo($datetime) {
             background: rgba(23, 191, 99, 0.1);
         }
 
+        .post-card .engagement-btn i {
+            font-size: 1.1rem;
+            transition: transform 0.2s ease;
+        }
+
+        .post-card .engagement-btn:hover i {
+            transform: scale(1.1);
+        }
+
         .post-card .engagement-btn span {
             font-weight: 500;
             min-width: 1.5rem;
             text-align: center;
-            line-height: 1;
         }
 
-        .post-card .engagement-btn.report {
-            color: var(--text-secondary);
-            margin-left: auto;
-        }
-
-        .post-card .engagement-btn.report:hover {
-            color: #ff4444;
-            background: rgba(255, 68, 68, 0.1);
-        }
-
-        .report-modal .modal-content {
-            background: var(--background-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-primary);
-        }
-
-        .report-modal .modal-header {
-            border-bottom: 1px solid var(--border-primary);
-        }
-
-        .report-modal .modal-footer {
+        /* Comment section */
+        .comments-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
             border-top: 1px solid var(--border-primary);
         }
 
-        .report-modal .form-control {
-            background: var(--background-primary);
+        .comment-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .comment-form textarea {
+            flex-grow: 1;
+            background: transparent;
             border: 1px solid var(--border-primary);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: var(--text-primary);
+            resize: none;
+            min-height: 60px;
+        }
+
+        .comment-form textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .comment-form button {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .comment-form button:hover {
+            background: #1a8cd8;
+        }
+
+        .comment-list {
+            margin-top: 1rem;
+        }
+
+        .comment {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background: var(--background-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .comment-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .comment-username {
+            font-weight: 600;
             color: var(--text-primary);
         }
 
-        .report-modal .form-control:focus {
-            background: var(--background-primary);
-            border-color: var(--accent-primary);
+        .comment-time {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .comment-content {
             color: var(--text-primary);
+            font-size: 0.95rem;
+            line-height: 1.4;
         }
 
         .content{
@@ -743,9 +810,9 @@ function timeAgo($datetime) {
                 <div class="tab-content">
                     <!-- For You -->
                     <div class="tab-pane fade show active" id="foryou" role="tabpanel">
-                        <?php if ($for_you_query->num_rows > 0): ?>
-                            <?php while ($post = $for_you_query->fetch_assoc()): ?>
-                                <div class="post-card">
+                        <?php if ($for_you_result->num_rows > 0): ?>
+                            <?php while ($post = $for_you_result->fetch_assoc()): ?>
+                                <div class="post-card" data-post-id="<?= $post['post_id'] ?>">
                                     <div class="user-info">
                                         <div class="profile-icon">
                                             <i class="fas fa-user"></i>
@@ -756,7 +823,7 @@ function timeAgo($datetime) {
                                                 <?php if ($post['user_id']): ?>
                                                     <?php
                                                     // Check if user has verification badge
-                                                    $verify_check = $mysqli->prepare("
+                                                    $verify_check = $conn->prepare("
                                                         SELECT 1 FROM user_badges ub 
                                                         JOIN badges b ON ub.badge_id = b.badge_id 
                                                         WHERE ub.user_id = ? AND b.name = 'Verified'
@@ -791,31 +858,35 @@ function timeAgo($datetime) {
                                             <div class="post-actions">
                                                 <form method="POST" action="follow_user.php" style="display: inline;">
                                                     <input type="hidden" name="followed_id" value="<?= $post['user_id'] ?>">
-                                                    <button type="submit" class="btn btn-sm <?= $post['is_following'] ? 'btn-secondary' : 'btn-primary' ?> follow-btn" title="<?= $post['is_following'] ? 'Unfollow' : 'Follow' ?> User">
-                                                        <i class="fas <?= $post['is_following'] ? 'fa-user-minus' : 'fa-user-plus' ?>"></i>
-                                                        <?= $post['is_following'] ? 'Unfollow' : 'Follow' ?>
+                                                    <button type="submit" class="btn btn-sm <?= $post['user_vote'] == 1 ? 'btn-secondary' : 'btn-primary' ?> follow-btn" title="<?= $post['user_vote'] == 1 ? 'Unfollow' : 'Follow' ?> User">
+                                                        <i class="fas <?= $post['user_vote'] == 1 ? 'fa-user-minus' : 'fa-user-plus' ?>"></i>
+                                                        <?= $post['user_vote'] == 1 ? 'Unfollow' : 'Follow' ?>
                                                     </button>
                                                 </form>
                                             </div>
                                         <?php endif; ?>
                                     </div>
                                     <div class="post-content"><?= htmlspecialchars($post['content'] ?? 'No content available') ?></div>
-                                    <?php if ($post['file_path']): ?>
+                                    <?php if (isset($post['file_path']) && $post['file_path']): ?>
                                         <img src="<?= htmlspecialchars($post['file_path']) ?>" alt="Post Image" class="post-image">
                                     <?php endif; ?>
                                     <div class="engagement-bar">
-                                        <button class="engagement-btn commented">
-                                            <i class="fas fa-comment"></i>
-                                            <span><?= $post['comment_count'] ?></span>
-                                        </button>
-                                        <button class="engagement-btn liked">
+                                        <button class="engagement-btn like-btn <?= $post['user_vote'] == 1 ? 'liked' : '' ?>" onclick="likePost(<?= $post['post_id'] ?>)">
                                             <i class="fas fa-heart"></i>
-                                            <span><?= $post['upvotes'] ?></span>
+                                            <span class="like-count"><?= $post['upvotes'] ?></span>
                                         </button>
-                                        <button class="engagement-btn report" onclick="openReportModal(<?= $post['post_id'] ?>)">
-                                            <i class="fas fa-flag"></i>
-                                            <span>Report</span>
+                                        <button class="engagement-btn comment-btn" onclick="toggleComments(<?= $post['post_id'] ?>)">
+                                            <i class="fas fa-comment"></i>
+                                            <span class="comment-count"><?= $post['comment_count'] ?></span>
                                         </button>
+                                    </div>
+                                    
+                                    <div class="comments-section" style="display: none;">
+                                        <div class="comment-form">
+                                            <textarea placeholder="Write a comment..." maxlength="280"></textarea>
+                                            <button onclick="submitComment(<?= $post['post_id'] ?>)">Reply</button>
+                                        </div>
+                                        <div class="comment-list"></div>
                                     </div>
                                 </div>
                             <?php endwhile; ?>
@@ -830,9 +901,9 @@ function timeAgo($datetime) {
                     <!-- Following -->
                     <div class="tab-pane fade" id="following" role="tabpanel">
                         <?php if ($user_id): ?>
-                            <?php if ($following_query->num_rows > 0): ?>
-                                <?php while ($post = $following_query->fetch_assoc()): ?>
-                                    <div class="post-card">
+                            <?php if ($following_result->num_rows > 0): ?>
+                                <?php while ($post = $following_result->fetch_assoc()): ?>
+                                    <div class="post-card" data-post-id="<?= $post['post_id'] ?>">
                                         <div class="user-info">
                                             <div class="profile-icon">
                                                 <i class="fas fa-user"></i>
@@ -843,7 +914,7 @@ function timeAgo($datetime) {
                                                     <?php if ($post['user_id']): ?>
                                                         <?php
                                                         // Check if user has verification badge
-                                                        $verify_check = $mysqli->prepare("
+                                                        $verify_check = $conn->prepare("
                                                             SELECT 1 FROM user_badges ub 
                                                             JOIN badges b ON ub.badge_id = b.badge_id 
                                                             WHERE ub.user_id = ? AND b.name = 'Verified'
@@ -887,22 +958,26 @@ function timeAgo($datetime) {
                                             <?php endif; ?>
                                         </div>
                                         <div class="post-content"><?= htmlspecialchars($post['content'] ?? 'No content available') ?></div>
-                                        <?php if ($post['file_path']): ?>
+                                        <?php if (isset($post['file_path']) && $post['file_path']): ?>
                                             <img src="<?= htmlspecialchars($post['file_path']) ?>" alt="Post Image" class="post-image">
                                         <?php endif; ?>
                                         <div class="engagement-bar">
-                                            <button class="engagement-btn commented">
-                                                <i class="fas fa-comment"></i>
-                                                <span><?= $post['comment_count'] ?></span>
-                                            </button>
-                                            <button class="engagement-btn liked">
+                                            <button class="engagement-btn like-btn <?= isset($post['user_vote']) && $post['user_vote'] == 1 ? 'liked' : '' ?>" onclick="likePost(<?= $post['post_id'] ?>)">
                                                 <i class="fas fa-heart"></i>
-                                                <span><?= $post['upvotes'] ?></span>
+                                                <span class="like-count"><?= $post['upvotes'] ?></span>
                                             </button>
-                                            <button class="engagement-btn report" onclick="openReportModal(<?= $post['post_id'] ?>)">
-                                                <i class="fas fa-flag"></i>
-                                                <span>Report</span>
+                                            <button class="engagement-btn comment-btn" onclick="toggleComments(<?= $post['post_id'] ?>)">
+                                                <i class="fas fa-comment"></i>
+                                                <span class="comment-count"><?= $post['comment_count'] ?></span>
                                             </button>
+                                        </div>
+                                        
+                                        <div class="comments-section" style="display: none;">
+                                            <div class="comment-form">
+                                                <textarea placeholder="Write a comment..." maxlength="280"></textarea>
+                                                <button onclick="submitComment(<?= $post['post_id'] ?>)">Reply</button>
+                                            </div>
+                                            <div class="comment-list"></div>
                                         </div>
                                     </div>
                                 <?php endwhile; ?>
@@ -1072,6 +1147,127 @@ function timeAgo($datetime) {
                     toastContainer.remove();
                 }
             }, 3000);
+        }
+
+        function likePost(postId) {
+            fetch('like_post.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'post_id=' + postId
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const likeBtn = document.querySelector(`[data-post-id="${postId}"] .like-btn`);
+                    const likeCount = document.querySelector(`[data-post-id="${postId}"] .like-count`);
+                    
+                    if (data.action === 'liked') {
+                        likeBtn.classList.add('liked');
+                        likeCount.textContent = parseInt(likeCount.textContent) + 1;
+                    } else {
+                        likeBtn.classList.remove('liked');
+                        likeCount.textContent = parseInt(likeCount.textContent) - 1;
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function toggleComments(postId) {
+            const commentsSection = document.querySelector(`[data-post-id="${postId}"] .comments-section`);
+            const commentBtn = document.querySelector(`[data-post-id="${postId}"] .comment-btn`);
+            
+            if (commentsSection.style.display === 'none') {
+                commentsSection.style.display = 'block';
+                commentBtn.classList.add('commented');
+                loadComments(postId);
+            } else {
+                commentsSection.style.display = 'none';
+                commentBtn.classList.remove('commented');
+            }
+        }
+
+        function loadComments(postId) {
+            const commentList = document.querySelector(`[data-post-id="${postId}"] .comment-list`);
+            commentList.innerHTML = '<div class="text-center text-secondary">Loading comments...</div>';
+
+            fetch(`get_comments.php?post_id=${postId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Comments data:', data); // Debug log
+                    if (data.success) {
+                        if (data.data && data.data.length > 0) {
+                            commentList.innerHTML = data.data.map(comment => `
+                                <div class="comment">
+                                    <div class="comment-header">
+                                        <span class="comment-username">${comment.username}</span>
+                                        <span class="comment-time">${formatTimeAgo(comment.created_at)}</span>
+                                    </div>
+                                    <div class="comment-content">${comment.content}</div>
+                                </div>
+                            `).join('');
+                        } else {
+                            commentList.innerHTML = '<div class="text-center text-secondary">No comments yet</div>';
+                        }
+                    } else {
+                        throw new Error(data.message || 'Failed to load comments');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading comments:', error);
+                    commentList.innerHTML = `<div class="text-center text-danger">
+                        Error loading comments: ${error.message}
+                        <br>
+                        <small>Please try refreshing the page</small>
+                    </div>`;
+                });
+        }
+
+        function formatTimeAgo(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000); // difference in seconds
+            
+            if (diff < 60) {
+                return `${diff}s`;
+            } else if (diff < 3600) {
+                return `${Math.floor(diff / 60)}m`;
+            } else if (diff < 86400) {
+                return `${Math.floor(diff / 3600)}h`;
+            } else {
+                return `${Math.floor(diff / 86400)}d`;
+            }
+        }
+
+        function submitComment(postId) {
+            const form = document.querySelector(`[data-post-id="${postId}"] .comment-form`);
+            const textarea = form.querySelector('textarea');
+            const content = textarea.value.trim();
+
+            if (!content) return;
+
+            fetch('comment_post.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `post_id=${postId}&content=${encodeURIComponent(content)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    textarea.value = '';
+                    loadComments(postId);
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
     </script>
 

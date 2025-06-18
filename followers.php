@@ -16,7 +16,7 @@ $profile_user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $user_id;
 $type = $_GET['type'] ?? 'followers';
 
 // Fetch user information
-$user_stmt = $mysqli->prepare("SELECT username, profile_image FROM users WHERE user_id = ?");
+$user_stmt = $conn->prepare("SELECT username, profile_image FROM users WHERE user_id = ?");
 $user_stmt->bind_param("i", $profile_user_id);
 $user_stmt->execute();
 $user = $user_stmt->get_result()->fetch_assoc();
@@ -30,7 +30,7 @@ if (!$user) {
 // Fetch followers or following based on type
 $users = [];
 if ($type === 'followers') {
-    $stmt = $mysqli->prepare("
+    $stmt = $conn->prepare("
         SELECT u.user_id, u.username, u.profile_image, u.created_at,
                " . ($user_id ? "(SELECT COUNT(*) FROM follows WHERE follower_id = ? AND followed_id = u.user_id) as is_following" : "0 as is_following") . "
         FROM follows f
@@ -44,7 +44,7 @@ if ($type === 'followers') {
         $stmt->bind_param("i", $profile_user_id);
     }
 } else {
-    $stmt = $mysqli->prepare("
+    $stmt = $conn->prepare("
         SELECT u.user_id, u.username, u.profile_image, u.created_at,
                " . ($user_id ? "(SELECT COUNT(*) FROM follows WHERE follower_id = ? AND followed_id = u.user_id) as is_following" : "0 as is_following") . "
         FROM follows f

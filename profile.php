@@ -17,31 +17,31 @@ $is_own_profile = $profile_user_id === $user_id;
 
 // Database migrations
 // Add bio column
-$check_bio = $mysqli->query("SHOW COLUMNS FROM users LIKE 'bio'");
+$check_bio = $conn->query("SHOW COLUMNS FROM users LIKE 'bio'");
 if ($check_bio->num_rows === 0) {
-    if (!$mysqli->query("ALTER TABLE users ADD bio VARCHAR(160) DEFAULT NULL")) {
-        die("Failed to add bio column: " . $mysqli->error);
+    if (!$conn->query("ALTER TABLE users ADD bio VARCHAR(160) DEFAULT NULL")) {
+        die("Failed to add bio column: " . $conn->error);
     }
 }
 
 // Add profile_views column
-$check_views = $mysqli->query("SHOW COLUMNS FROM users LIKE 'profile_views'");
+$check_views = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_views'");
 if ($check_views->num_rows === 0) {
-    if (!$mysqli->query("ALTER TABLE users ADD profile_views INT DEFAULT 0")) {
-        die("Failed to add profile_views column: " . $mysqli->error);
+    if (!$conn->query("ALTER TABLE users ADD profile_views INT DEFAULT 0")) {
+        die("Failed to add profile_views column: " . $conn->error);
     }
 }
 
 // Increment profile views if not own profile (using prepared statement)
 if (!$is_own_profile) {
-    $update_views = $mysqli->prepare("UPDATE users SET profile_views = profile_views + 1 WHERE user_id = ?");
+    $update_views = $conn->prepare("UPDATE users SET profile_views = profile_views + 1 WHERE user_id = ?");
     $update_views->bind_param("i", $profile_user_id);
     $update_views->execute();
     $update_views->close();
 }
 
 // Fetch user details
-$user_stmt = $mysqli->prepare("
+$user_stmt = $conn->prepare("
     SELECT username, name, bio, profile_image, points, is_premium, premium_until, created_at, profile_views 
     FROM users 
     WHERE user_id = ?
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile']) && 
     }
 
     // Check username uniqueness
-    $username_check_stmt = $mysqli->prepare("
+    $username_check_stmt = $conn->prepare("
         SELECT user_id 
         FROM users 
         WHERE username = ? AND user_id != ?
@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile']) && 
 
     // Update profile if no errors
     if (empty($errors)) {
-        $update_stmt = $mysqli->prepare("
+        $update_stmt = $conn->prepare("
             UPDATE users 
             SET username = ?, name = ?, bio = ?, profile_image = ? 
             WHERE user_id = ?
@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile']) && 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_action']) && !$is_own_profile) {
     $action = $_POST['follow_action'];
     if ($action === 'follow') {
-        $follow_stmt = $mysqli->prepare("
+        $follow_stmt = $conn->prepare("
             INSERT INTO follows (follower_id, followed_id, followed_at) 
             VALUES (?, ?, NOW())
         ");
@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_action']) && !
         $follow_stmt->execute();
         $follow_stmt->close();
     } elseif ($action === 'unfollow') {
-        $unfollow_stmt = $mysqli->prepare("
+        $unfollow_stmt = $conn->prepare("
             DELETE FROM follows 
             WHERE follower_id = ? AND followed_id = ?
         ");
@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_action']) && !
 // Check if current user is following profile user
 $is_following = false;
 if (!$is_own_profile) {
-    $follow_check_stmt = $mysqli->prepare("
+    $follow_check_stmt = $conn->prepare("
         SELECT 1 
         FROM follows 
         WHERE follower_id = ? AND followed_id = ?
@@ -183,20 +183,20 @@ if (!$is_own_profile) {
 }
 
 // Get followers and following counts
-$followers_stmt = $mysqli->prepare("SELECT COUNT(*) as count FROM follows WHERE followed_id = ?");
+$followers_stmt = $conn->prepare("SELECT COUNT(*) as count FROM follows WHERE followed_id = ?");
 $followers_stmt->bind_param("i", $profile_user_id);
 $followers_stmt->execute();
 $followers_count = $followers_stmt->get_result()->fetch_assoc()['count'];
 $followers_stmt->close();
 
-$following_stmt = $mysqli->prepare("SELECT COUNT(*) as count FROM follows WHERE follower_id = ?");
+$following_stmt = $conn->prepare("SELECT COUNT(*) as count FROM follows WHERE follower_id = ?");
 $following_stmt->bind_param("i", $profile_user_id);
 $following_stmt->execute();
 $following_count = $following_stmt->get_result()->fetch_assoc()['count'];
 $following_stmt->close();
 
 // Fetch user badges
-$badges_stmt = $mysqli->prepare("
+$badges_stmt = $conn->prepare("
     SELECT b.badge_id, b.name, b.description, b.image_path 
     FROM user_badges ub 
     JOIN badges b ON ub.badge_id = b.badge_id 
@@ -212,7 +212,7 @@ while ($row = $badges_result->fetch_assoc()) {
 $badges_stmt->close();
 
 // Fetch recent point transactions
-$points_stmt = $mysqli->prepare("
+$points_stmt = $conn->prepare("
     SELECT description, points, transaction_date 
     FROM point_transactions 
     WHERE user_id = ? 
@@ -233,7 +233,7 @@ $posts_per_page = 10;
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($page - 1) * $posts_per_page;
 
-$posts_stmt = $mysqli->prepare("
+$posts_stmt = $conn->prepare("
     SELECT 
         p.post_id, p.title, p.content, p.created_at, p.upvotes, p.downvotes, p.views, p.user_id,
         u.username,
@@ -261,7 +261,7 @@ while ($row = $posts_result->fetch_assoc()) {
     
     // Check if current user is following this post's author
     if (isset($user_id) && $user_id && $user_id != $row['user_id']) {
-        $follow_check_stmt = $mysqli->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
+        $follow_check_stmt = $conn->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
         $follow_check_stmt->bind_param("ii", $user_id, $row['user_id']);
         $follow_check_stmt->execute();
         $row['is_following'] = $follow_check_stmt->get_result()->num_rows > 0;
@@ -275,7 +275,7 @@ while ($row = $posts_result->fetch_assoc()) {
 $posts_stmt->close();
 
 // Get total posts for pagination
-$total_posts_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM posts WHERE user_id = ?");
+$total_posts_stmt = $conn->prepare("SELECT COUNT(*) as total FROM posts WHERE user_id = ?");
 $total_posts_stmt->bind_param("i", $profile_user_id);
 $total_posts_stmt->execute();
 $total_posts = $total_posts_stmt->get_result()->fetch_assoc()['total'];
@@ -283,7 +283,7 @@ $total_posts_stmt->close();
 $total_pages = ceil($total_posts / $posts_per_page);
 
 // Fetch communities
-$communities_stmt = $mysqli->prepare("
+$communities_stmt = $conn->prepare("
     SELECT c.community_id, c.name, cm.is_admin 
     FROM communities c 
     JOIN community_members cm ON c.community_id = cm.community_id 
@@ -301,7 +301,7 @@ $communities_stmt->close();
 // Check if current user is following the profile user
 $is_following_profile = false;
 if ($user_id && $user_id != $profile_user_id) {
-    $follow_check_stmt = $mysqli->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
+    $follow_check_stmt = $conn->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
     $follow_check_stmt->bind_param("ii", $user_id, $profile_user_id);
     $follow_check_stmt->execute();
     $is_following_profile = $follow_check_stmt->get_result()->num_rows > 0;
@@ -994,7 +994,7 @@ function timeAgo($datetime) {
     <div class="right-sidebar-container d-none d-lg-block ">
             <?php include 'includes/rightsidebar.php'; ?>
         </div>
-
+ <?php include 'includes/mobilemenu.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.0.0/dist/js/coreui.bundle.min.js"></script>
     <script>

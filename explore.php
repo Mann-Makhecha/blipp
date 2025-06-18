@@ -1,8 +1,8 @@
 <?php
 session_start();
 
-// Initialize $mysqli as null and handle database connection errors
-$mysqli = null;
+// Initialize $conn as null and handle database connection errors
+$conn = null;
 $errors = [];
 try {
     require_once 'includes/db.php';
@@ -19,12 +19,12 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'users'; // Default to 'users
 $search_results = [];
 
 // Search logic based on the active tab
-if ($search_query && $mysqli) {
-    $search_term = '%' . $mysqli->real_escape_string($search_query) . '%';
+if ($search_query && $conn) {
+    $search_term = '%' . $conn->real_escape_string($search_query) . '%';
     try {
         if ($active_tab === 'users') {
             // Search users by username
-            $stmt = $mysqli->prepare("
+            $stmt = $conn->prepare("
                 SELECT user_id, username
                 FROM users
                 WHERE username LIKE ?
@@ -39,7 +39,7 @@ if ($search_query && $mysqli) {
             $stmt->close();
         } elseif ($active_tab === 'posts') {
             // Search posts by content
-            $stmt = $mysqli->prepare("
+            $stmt = $conn->prepare("
                 SELECT p.post_id, p.content, p.created_at, u.username
                 FROM posts p
                 JOIN users u ON p.user_id = u.user_id
@@ -56,7 +56,7 @@ if ($search_query && $mysqli) {
             $stmt->close();
         } elseif ($active_tab === 'communities') {
             // Search communities by name
-            $stmt = $mysqli->prepare("
+            $stmt = $conn->prepare("
                 SELECT community_id, name
                 FROM communities
                 WHERE name LIKE ? AND is_private = 0
@@ -77,9 +77,9 @@ if ($search_query && $mysqli) {
 
 // Fetch suggested users (users the current user isn't following)
 $suggested_users = [];
-if ($user_id && $mysqli && empty($search_query)) {
+if ($user_id && $conn && empty($search_query)) {
     try {
-        $stmt = $mysqli->prepare("
+        $stmt = $conn->prepare("
             SELECT u.user_id, u.username,
                    CASE WHEN f.follower_id IS NOT NULL THEN 1 ELSE 0 END as is_following
             FROM users u
@@ -198,7 +198,7 @@ function timeAgo($datetime) {
             <!-- Main Content -->
             <div class="col-md-6 py-4 px-3 position-relative vh-100">
                 <!-- Database Connection Error -->
-                <?php if (!$mysqli): ?>
+                <?php if (!$conn): ?>
                     <div class="alert alert-danger text-center" role="alert">
                         Unable to connect to the database. Please try again later.
                     </div>
@@ -257,7 +257,7 @@ function timeAgo($datetime) {
                                 <?php if ($user_id && $user['user_id'] != $user_id): ?>
                                     <?php
                                     // Check if current user is following this user
-                                    $follow_check = $mysqli->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
+                                    $follow_check = $conn->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
                                     $follow_check->bind_param("ii", $user_id, $user['user_id']);
                                     $follow_check->execute();
                                     $is_following = $follow_check->get_result()->num_rows > 0;

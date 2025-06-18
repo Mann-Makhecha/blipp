@@ -4,10 +4,23 @@
 // Check if user is logged in
 $user_id = $_SESSION['user_id'] ?? null;
 
+// Get user's username
+$username = '';
+if (isset($_SESSION['user_id'])) {
+    $stmt = $conn->prepare("SELECT username FROM users WHERE user_id = ?");
+    $param_user_id = $_SESSION['user_id'];
+    $stmt->bind_param("i", $param_user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $username = $row['username'];
+    }
+    $stmt->close();
+}
 
 if ($user_id) {
     // Fetch user details
-    $stmt = $mysqli->prepare("SELECT username FROM users WHERE user_id = ?");
+    $stmt = $conn->prepare("SELECT username FROM users WHERE user_id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -17,7 +30,6 @@ if ($user_id) {
     }
     $stmt->close();
 }
-
 
 ?>
 
@@ -155,9 +167,9 @@ if ($user_id) {
       </li>
      
       <li class="nav-item pro-link">
-        <a class="nav-link" href="https://coreui.io/pro/">
-          <i class="fas fa-star"></i>
-          <span>Try Blipp <strong>PRO</strong></span>
+        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'blipp_pro.php' ? 'active' : '' ?>" href="blipp_pro.php">
+          <i class="fas fa-crown"></i>
+          <span>Blip <strong>PRO</strong></span>
         </a>
       </li>
       <li class="nav-item">

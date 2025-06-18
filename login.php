@@ -25,7 +25,7 @@ if ($action === 'reset' && $_SERVER['REQUEST_METHOD'] == 'POST') {
             $error = "Invalid email format!";
         } else {
             // Check if email exists and get security question/answer
-            $stmt = $mysqli->prepare("SELECT user_id, security_question, security_answer FROM users WHERE email = ?");
+            $stmt = $conn->prepare("SELECT user_id, security_question, security_answer FROM users WHERE email = ?");
             $stmt->bind_param("s", $reset_email);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -50,7 +50,7 @@ if ($action === 'reset' && $_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!filter_var($reset_email, FILTER_VALIDATE_EMAIL)) {
             $error = "Invalid email format!";
         } else {
-            $stmt = $mysqli->prepare("SELECT user_id, security_question FROM users WHERE email = ?");
+            $stmt = $conn->prepare("SELECT user_id, security_question FROM users WHERE email = ?");
             $stmt->bind_param("s", $reset_email);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -68,7 +68,7 @@ if ($action === 'reset' && $_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // First, let's add the email_verified column if it doesn't exist
-$mysqli->query("
+$conn->query("
     ALTER TABLE users 
     ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !isset($_POST['reset_email'])) {
             $remember_me = isset($_POST['remember_me']);
 
             // Use prepared statement to fetch user
-            $stmt = $mysqli->prepare("SELECT user_id, username, password_hash, role, email_verified, is_active FROM users WHERE email = ?");
+            $stmt = $conn->prepare("SELECT user_id, username, password_hash, role, email_verified, is_active FROM users WHERE email = ?");
             if ($stmt === false) {
                 $error = "Database error: Unable to prepare statement.";
             } else {
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !isset($_POST['reset_email'])) {
                         $_SESSION['login_attempts'] = [];
                         
                         // Update the user's last active timestamp
-                        $updateStmt = $mysqli->prepare("UPDATE users SET updated_at = current_timestamp() WHERE user_id = ?");
+                        $updateStmt = $conn->prepare("UPDATE users SET updated_at = current_timestamp() WHERE user_id = ?");
                         $updateStmt->bind_param("i", $user['user_id']);
                         $updateStmt->execute();
                         $updateStmt->close();

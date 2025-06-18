@@ -9,21 +9,28 @@
 <body>
     <!-- Mobile Bottom Navigation -->
     <nav class="mobile-nav">
-        <a href="index.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+        <a href="index.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>" aria-label="Home">
             <i class="fas fa-house"></i>
         </a>
-        <a href="explore.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'explore.php' ? 'active' : ''; ?>">
+        <a href="explore.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'explore.php' ? 'active' : ''; ?>" aria-label="Explore">
             <i class="fa-solid fa-magnifying-glass"></i>
         </a>
-        <a href="Communities.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'Communities.php' ? 'active' : ''; ?>">
+        <a href="communities.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'communities.php' ? 'active' : ''; ?>" aria-label="Communities">
             <i class="fas fa-users"></i>
         </a>
-        <a href="message.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'message.php' ? 'active' : ''; ?>">
-            <i class="fas fa-envelope"></i>
-        </a>
-        <a href="profile.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : ''; ?>">
+       
+        <a href="profile.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : ''; ?>" aria-label="Profile">
             <i class="fas fa-user"></i>
         </a>
     </nav>
+    <script>
+    // Force full page reload on every mobile menu link click
+    // (prevents SPA-like behavior or browser caching issues)
+    document.querySelectorAll('.mobile-nav .nav-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            window.location.href = this.href;
+        });
+    });
+    </script>
 </body>
 </html>
