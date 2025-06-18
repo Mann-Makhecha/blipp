@@ -207,79 +207,8 @@ if ($mysqli && $community_id > 0) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="icon" href="favicon (2).png" type="image/x-icon">
-
-    <style>
-        body {
-            background-color: #000;
-            color: #fff;
-        }
-
-        .community-header {
-            border-bottom: 1px solid #333;
-            padding-bottom: 1rem;
-        }
-
-        .post-card {
-            border-bottom: 1px solid #333;
-            transition: background-color 0.2s;
-        }
-
-        .post-card:hover {
-            background-color: #111;
-        }
-
-        .form-control,
-        .form-control-file {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            color: #fff;
-        }
-
-        .form-control:focus {
-            background-color: #1a1a1a;
-            border-color: #1d9bf0;
-            box-shadow: 0 0 0 0.25rem rgba(29, 155, 240, 0.25);
-        }
-
-        .btn-primary {
-            background-color: #1d9bf0;
-            border-color: #1d9bf0;
-        }
-
-        .btn-primary:hover {
-            background-color: #1a8cd8;
-            border-color: #1a8cd8;
-        }
-
-        .post-image {
-            max-width: 100%;
-            height: auto;
-            margin-top: 10px;
-        }
-
-        .community-link {
-            color: #1d9bf0;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .community-link:hover {
-            color: #1a8cd8;
-            text-decoration: underline;
-        }
-
-        .community-link i {
-            margin-right: 0.25rem;
-        }
-
-        @media (max-width: 767px) {
-            body {
-                padding-bottom: 60px;
-                /* Match sidebar.php's padding for bottom nav */
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="community.css">
+    
 
 </head>
 

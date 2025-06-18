@@ -194,9 +194,7 @@ $users = $stmt->get_result();
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Users Management</h1>
         <div>
-            <a href="verify_users.php" class="btn btn-success me-2">
-                <i class="fas fa-check-circle"></i> Verification Management
-            </a>
+            
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
                 <i class="fas fa-plus"></i> Add User
             </button>
@@ -256,7 +254,7 @@ $users = $stmt->get_result();
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <i class="fas fa-user-circle fa-2x text-muted me-2"></i>
+                                        <i class="fas fa-user-circle fa-2x text-gray me-2"></i>
                                         <div>
                                             <h6 class="mb-0">
                                                 <?= htmlspecialchars($user['username']) ?>
@@ -264,7 +262,7 @@ $users = $stmt->get_result();
                                                     <i class="fas fa-check-circle text-primary ms-1" title="Verified Account"></i>
                                                 <?php endif; ?>
                                             </h6>
-                                            <small class="text-muted">ID: <?= $user['user_id'] ?></small>
+                                            <small class="text-gray">ID: <?= $user['user_id'] ?></small>
                                         </div>
                                     </div>
                                 </td>

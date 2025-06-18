@@ -321,7 +321,7 @@ if ($user_id && $user_id != $profile_user_id) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.0.0/dist/css/coreui.min.css">
     <script src="https://kit.fontawesome.com/c508d42d1a.js" crossorigin="anonymous"></script>
     <link rel="icon" href="favicon (2).png" type="image/x-icon">
-
+    <link rel="stylesheet" href="profile.css">
     <style>
         :root {
             --background-primary: #000;
