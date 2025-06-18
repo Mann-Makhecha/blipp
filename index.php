@@ -2,6 +2,7 @@
 session_start();
 require_once 'includes/db.php';
 require_once 'includes/settings.php';
+require_once 'includes/functions.php';
 
 // Check if user is logged in
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
@@ -116,9 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user_id) {
                 $file_stmt->close();
             }
 
-            // Redirect to refresh the page and show the new post
-            header("Location: index.php");
-            exit();
+            // Redirect to prevent form resubmission
+            redirect($_SERVER['HTTP_REFERER']);
         } else {
             $errors[] = "Failed to create post: " . $stmt->error;
         }
@@ -181,48 +181,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['report_post'])) {
         $stmt->bind_param("iis", $param_post_id, $param_user_id, $param_reason);
         
         if ($stmt->execute()) {
-            $_SESSION['success_message'] = "Post has been reported successfully.";
+            showSuccess("Post has been reported successfully.");
         } else {
-            $_SESSION['error_message'] = "Failed to report the post.";
+            showError("Failed to report the post.");
         }
         $stmt->close();
         
         // Redirect to prevent form resubmission
-        header("Location: " . $_SERVER['HTTP_REFERER']);
-        exit();
+        redirect($_SERVER['HTTP_REFERER']);
     }
 }
 
-// Function to format time ago (e.g., "5m ago")
-function timeAgo($datetime) {
-    $now = new DateTime('now', new DateTimeZone('Asia/Kolkata'));
-    $post_time = new DateTime($datetime, new DateTimeZone('Asia/Kolkata'));
-    $interval = $now->diff($post_time);
-
-    if ($interval->y > 0) return $interval->y . 'y ago';
-    if ($interval->m > 0) return $interval->m . 'mo ago';
-    if ($interval->d > 0) return $interval->d . 'd ago';
-    if ($interval->h > 0) return $interval->h . 'h ago';
-    if ($interval->i > 0) return $interval->i . 'm ago';
-    return $interval->s . 's ago';
-}
-
-// Function to format timestamp
-function formatTimeAgo($timestamp) {
-    $time = strtotime($timestamp);
-    $now = time();
-    $diff = $now - $time;
-    
-    if ($diff < 60) {
-        return $diff . 's';
-    } elseif ($diff < 3600) {
-        return floor($diff / 60) . 'm';
-    } elseif ($diff < 86400) {
-        return floor($diff / 3600) . 'h';
-    } else {
-        return floor($diff / 86400) . 'd';
-    }
-}
+// Include header and sidebar
 ?>
 
 <!DOCTYPE html>
@@ -1201,7 +1171,6 @@ function formatTimeAgo($timestamp) {
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Comments data:', data); // Debug log
                     if (data.success) {
                         if (data.data && data.data.length > 0) {
                             commentList.innerHTML = data.data.map(comment => `

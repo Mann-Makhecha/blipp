@@ -1,30 +1,30 @@
 <?php
 require_once 'includes/db.php';
 require_once 'includes/settings.php';
+require_once 'includes/functions.php';
 
 $error = '';
 $success = '';
 
 // Check if registration is allowed
 if (!is_registration_allowed()) {
-    header("Location: index.php");
-    exit();
+    redirect('index.php');
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Sanitize inputs
-    $username = trim($_POST['username'] ?? '');
-    $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
+    $username = sanitizeInput($_POST['username'] ?? '');
+    $name = sanitizeInput($_POST['name'] ?? '');
+    $email = sanitizeInput($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $cnfpassword = $_POST['cnfpassword'] ?? '';
-    $security_question = trim($_POST['security_question'] ?? '');
-    $security_answer = trim($_POST['security_answer'] ?? '');
+    $security_question = sanitizeInput($_POST['security_question'] ?? '');
+    $security_answer = sanitizeInput($_POST['security_answer'] ?? '');
 
     // Validate inputs
     if (empty($username) || empty($name) || empty($email) || empty($password) || empty($cnfpassword) || empty($security_question) || empty($security_answer)) {
         $error = "All fields are required!";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    } elseif (!isValidEmail($email)) {
         $error = "Invalid email format!";
     } elseif ($password !== $cnfpassword) {
         $error = "Passwords do not match!";
@@ -38,13 +38,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $result = $stmt->get_result();
 
         if ($result->num_rows > 0) {
-            $check_email = $mysqli->query("SELECT user_id FROM users WHERE email = '$email'")->num_rows;
-            $check_username = $mysqli->query("SELECT user_id FROM users WHERE username = '$username'")->num_rows;
-            if ($check_username > 0) {
+            // Use prepared statements to check email and username separately
+            $email_check_stmt = $mysqli->prepare("SELECT user_id FROM users WHERE email = ?");
+            $email_check_stmt->bind_param("s", $email);
+            $email_check_stmt->execute();
+            $email_result = $email_check_stmt->get_result();
+            
+            $username_check_stmt = $mysqli->prepare("SELECT user_id FROM users WHERE username = ?");
+            $username_check_stmt->bind_param("s", $username);
+            $username_check_stmt->execute();
+            $username_result = $username_check_stmt->get_result();
+            
+            if ($username_result->num_rows > 0) {
                 $error = "Username already exists!";
-            } elseif ($check_email > 0) {
+            } elseif ($email_result->num_rows > 0) {
                 $error = "Email already exists!";
             }
+            
+            $email_check_stmt->close();
+            $username_check_stmt->close();
         } else {
             // Hash password and security answer
             $password_hash = password_hash($password, PASSWORD_DEFAULT);
@@ -58,9 +70,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $stmt->bind_param("ssssss", $name, $username, $email, $password_hash, $security_question, $security_answer_hash);
 
                 if ($stmt->execute()) {
-                    $success = "Registration successful! Please login.";
-                    header("Location: login.php");
-                    exit();
+                    $user_id = $mysqli->insert_id;
+                    
+                    // After successful registration, check if email verification is required
+                    if (is_email_verification_required()) {
+                        // Generate verification token
+                        $token = generateToken(32);
+                        $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                        
+                        $verification_stmt = $mysqli->prepare("
+                            INSERT INTO email_verifications (user_id, token, expires_at) 
+                            VALUES (?, ?, ?)
+                        ");
+                        $verification_stmt->bind_param("iss", $user_id, $token, $expires);
+                        $verification_stmt->execute();
+                        $verification_stmt->close();
+                        
+                        // Send verification email
+                        $verification_link = "https://" . $_SERVER['HTTP_HOST'] . "/verify.php?token=" . $token;
+                        $to = $email;
+                        $subject = "Verify your email address";
+                        $message = "Please click the following link to verify your email address:\n\n" . $verification_link;
+                        $headers = "From: noreply@" . $_SERVER['HTTP_HOST'];
+                        
+                        mail($to, $subject, $message, $headers);
+                        
+                        showSuccess("Registration successful! Please check your email to verify your account.");
+                    } else {
+                        showSuccess("Registration successful! You can now log in.");
+                    }
+                    
+                    redirect('login.php');
                 } else {
                     $error = "Registration failed: " . $stmt->error;
                 }
@@ -68,33 +108,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
     }
-}
-
-// After successful registration, check if email verification is required
-if (is_email_verification_required()) {
-    // Generate verification token
-    $token = bin2hex(random_bytes(32));
-    $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
-    
-    $stmt = $mysqli->prepare("
-        INSERT INTO email_verifications (user_id, token, expires_at) 
-        VALUES (?, ?, ?)
-    ");
-    $stmt->bind_param("iss", $user_id, $token, $expires);
-    $stmt->execute();
-    
-    // Send verification email
-    $verification_link = "https://" . $_SERVER['HTTP_HOST'] . "/verify.php?token=" . $token;
-    $to = $email;
-    $subject = "Verify your email address";
-    $message = "Please click the following link to verify your email address:\n\n" . $verification_link;
-    $headers = "From: noreply@" . $_SERVER['HTTP_HOST'];
-    
-    mail($to, $subject, $message, $headers);
-    
-    $_SESSION['success_message'] = "Registration successful! Please check your email to verify your account.";
-} else {
-    $_SESSION['success_message'] = "Registration successful! You can now log in.";
 }
 ?>
 

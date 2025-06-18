@@ -17,4 +17,7 @@ if ($conn->connect_error) {
 
 // Set charset to ensure proper encoding
 $conn->set_charset("utf8mb4");
+
+// Create alias for backward compatibility
+$mysqli = $conn;
 ?>

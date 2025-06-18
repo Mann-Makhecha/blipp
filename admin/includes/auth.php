@@ -1,23 +1,23 @@
 <?php
 session_start();
 
+// Include required files
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/functions.php';
+
 // Initialize $admin as null by default
 $admin = null;
 
 // Check if user is logged in and is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../login.php");
-    exit();
+if (!isLoggedIn() || !isAdmin()) {
+    redirect('../login.php');
 }
 
-// Include database connection
-require_once __DIR__ . '/../../includes/db.php';
-
 // Only proceed with database operations if we have a valid connection
-if (isset($mysqli) && !$mysqli->connect_error) {
+if (isset($conn) && !$conn->connect_error) {
     // Get admin info
     $admin_id = $_SESSION['user_id'];
-    $admin_query = $mysqli->prepare("SELECT username, email FROM users WHERE user_id = ?");
+    $admin_query = $conn->prepare("SELECT username, email FROM users WHERE user_id = ?");
     
     if ($admin_query) {
         $admin_query->bind_param("i", $admin_id);

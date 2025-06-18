@@ -1,12 +1,12 @@
 <?php
 session_start();
 require_once 'includes/db.php';
+require_once 'includes/functions.php';
 
 // Check if user is logged in
 $user_id = $_SESSION['user_id'] ?? null;
 if (!isset($user_id)) {
-    header("Location: login.php");
-    exit();
+    redirect('login.php');
 }
 
 include 'includes/checklogin.php';
@@ -308,19 +308,6 @@ if ($user_id && $user_id != $profile_user_id) {
     $follow_check_stmt->close();
 }
 
-// Function to format time ago
-function timeAgo($datetime) {
-    $now = new DateTime('now', new DateTimeZone('Asia/Kolkata'));
-    $post_time = new DateTime($datetime, new DateTimeZone('Asia/Kolkata'));
-    $interval = $now->diff($post_time);
-
-    if ($interval->y > 0) return $interval->y . 'y ago';
-    if ($interval->m > 0) return $interval->m . 'mo ago';
-    if ($interval->d > 0) return $interval->d . 'd ago';
-    if ($interval->h > 0) return $interval->h . 'h ago';
-    if ($interval->i > 0) return $interval->i . 'm ago';
-    return $interval->s . 's ago';
-}
 ?>
 
 <!DOCTYPE html>
@@ -773,7 +760,6 @@ function timeAgo($datetime) {
                     <?php endif; ?>
                 </div>
 
-
                 <!-- Edit Profile Modal -->
                 <?php if ($is_own_profile): ?>
                     <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
@@ -987,8 +973,7 @@ function timeAgo($datetime) {
                     <p class="pw-light p-3 text-center">No posts yet.</p>
                 <?php endif; ?>
             </div>
-                   
-           
+
         </div>
     </div>  
     <div class="right-sidebar-container d-none d-lg-block ">

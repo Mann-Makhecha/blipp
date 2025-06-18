@@ -6,6 +6,7 @@ $conn = null;
 $errors = [];
 try {
     require_once 'includes/db.php';
+    require_once 'includes/functions.php';
 } catch (Exception $e) {
     $errors[] = $e->getMessage();
 }
@@ -100,19 +101,6 @@ if ($user_id && $conn && empty($search_query)) {
     }
 }
 
-// Function to format time ago (e.g., "5m ago")
-function timeAgo($datetime) {
-    $now = new DateTime('now', new DateTimeZone('Asia/Kolkata'));
-    $post_time = new DateTime($datetime, new DateTimeZone('Asia/Kolkata'));
-    $interval = $now->diff($post_time);
-
-    if ($interval->y > 0) return $interval->y . 'y ago';
-    if ($interval->m > 0) return $interval->m . 'mo ago';
-    if ($interval->d > 0) return $interval->d . 'd ago';
-    if ($interval->h > 0) return $interval->h . 'h ago';
-    if ($interval->i > 0) return $interval->i . 'm ago';
-    return $interval->s . 's ago';
-}
 ?>
 
 <!DOCTYPE html>
@@ -183,7 +171,6 @@ function timeAgo($datetime) {
             }
         }
 
-       
     </style>
 </head>
 <body>

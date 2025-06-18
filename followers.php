@@ -1,12 +1,12 @@
 <?php
 session_start();
 require_once 'includes/db.php';
+require_once 'includes/functions.php';
 
 // Check if user is logged in
 $user_id = $_SESSION['user_id'] ?? null;
 if (!$user_id) {
-    header("Location: login.php");
-    exit();
+    redirect('login.php');
 }
 
 // Get the user ID to view (default to current user)
@@ -23,8 +23,7 @@ $user = $user_stmt->get_result()->fetch_assoc();
 $user_stmt->close();
 
 if (!$user) {
-    header("Location: index.php");
-    exit();
+    redirect('index.php');
 }
 
 // Fetch followers or following based on type
@@ -66,19 +65,6 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Function to format time ago
-function timeAgo($datetime) {
-    $now = new DateTime('now', new DateTimeZone('Asia/Kolkata'));
-    $time = new DateTime($datetime, new DateTimeZone('Asia/Kolkata'));
-    $interval = $now->diff($time);
-
-    if ($interval->y > 0) return $interval->y . 'y ago';
-    if ($interval->m > 0) return $interval->m . 'mo ago';
-    if ($interval->d > 0) return $interval->d . 'd ago';
-    if ($interval->h > 0) return $interval->h . 'h ago';
-    if ($interval->i > 0) return $interval->i . 'm ago';
-    return $interval->s . 's ago';
-}
 ?>
 
 <!DOCTYPE html>

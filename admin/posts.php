@@ -30,16 +30,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Delete files from database
-            $mysqli->query("DELETE FROM files WHERE post_id = $post_id");
+            $delete_files_stmt = $mysqli->prepare("DELETE FROM files WHERE post_id = ?");
+            $delete_files_stmt->bind_param("i", $post_id);
+            $delete_files_stmt->execute();
+            $delete_files_stmt->close();
             
             // Delete comments
-            $mysqli->query("DELETE FROM comments WHERE post_id = $post_id");
+            $delete_comments_stmt = $mysqli->prepare("DELETE FROM comments WHERE post_id = ?");
+            $delete_comments_stmt->bind_param("i", $post_id);
+            $delete_comments_stmt->execute();
+            $delete_comments_stmt->close();
             
             // Delete reports
-            $mysqli->query("DELETE FROM post_reports WHERE post_id = $post_id");
+            $delete_reports_stmt = $mysqli->prepare("DELETE FROM post_reports WHERE post_id = ?");
+            $delete_reports_stmt->bind_param("i", $post_id);
+            $delete_reports_stmt->execute();
+            $delete_reports_stmt->close();
             
             // Delete the post
-            $mysqli->query("DELETE FROM posts WHERE post_id = $post_id");
+            $delete_post_stmt = $mysqli->prepare("DELETE FROM posts WHERE post_id = ?");
+            $delete_post_stmt->bind_param("i", $post_id);
+            $delete_post_stmt->execute();
+            $delete_post_stmt->close();
             
             $mysqli->commit();
             $_SESSION['success_message'] = "Post deleted successfully.";
@@ -161,32 +173,41 @@ if (isset($_GET['view']) && $_GET['view'] === 'post') {
     }
 
     // Get post files
-    $files = $mysqli->query("
+    $files_stmt = $mysqli->prepare("
         SELECT * FROM files 
-        WHERE post_id = $post_id
+        WHERE post_id = ?
     ");
+    $files_stmt->bind_param("i", $post_id);
+    $files_stmt->execute();
+    $files = $files_stmt->get_result();
 
     // Get post comments
-    $comments = $mysqli->query("
+    $comments_stmt = $mysqli->prepare("
         SELECT 
             c.*,
             u.username
         FROM comments c
         JOIN users u ON c.user_id = u.user_id
-        WHERE c.post_id = $post_id
+        WHERE c.post_id = ?
         ORDER BY c.created_at DESC
     ");
+    $comments_stmt->bind_param("i", $post_id);
+    $comments_stmt->execute();
+    $comments = $comments_stmt->get_result();
 
     // Get post reports
-    $reports = $mysqli->query("
+    $reports_stmt = $mysqli->prepare("
         SELECT 
             r.*,
             u.username as reporter_username
         FROM post_reports r
         JOIN users u ON r.reporter_id = u.user_id
-        WHERE r.post_id = $post_id
+        WHERE r.post_id = ?
         ORDER BY r.created_at DESC
     ");
+    $reports_stmt->bind_param("i", $post_id);
+    $reports_stmt->execute();
+    $reports = $reports_stmt->get_result();
 
     // Include view post template
     require_once 'includes/header.php';

@@ -92,32 +92,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mysqli->begin_transaction();
         
         try {
-            // Delete associated files
-            $file_stmt = $mysqli->prepare("SELECT file_path FROM files WHERE post_id = ?");
-            $file_stmt->bind_param("i", $post_id);
-            $file_stmt->execute();
-            $file_result = $file_stmt->get_result();
-            
-            while ($file = $file_result->fetch_assoc()) {
-                if (file_exists($file['file_path'])) {
-                    unlink($file['file_path']);
-                }
-            }
-            
             // Delete files from database
-            $mysqli->query("DELETE FROM files WHERE post_id = $post_id");
+            $delete_files_stmt = $mysqli->prepare("DELETE FROM files WHERE post_id = ?");
+            $delete_files_stmt->bind_param("i", $post_id);
+            $delete_files_stmt->execute();
+            $delete_files_stmt->close();
             error_log("Files deleted from database");
             
             // Delete comments
-            $mysqli->query("DELETE FROM comments WHERE post_id = $post_id");
+            $delete_comments_stmt = $mysqli->prepare("DELETE FROM comments WHERE post_id = ?");
+            $delete_comments_stmt->bind_param("i", $post_id);
+            $delete_comments_stmt->execute();
+            $delete_comments_stmt->close();
             error_log("Comments deleted");
             
             // Delete reports
-            $mysqli->query("DELETE FROM post_reports WHERE post_id = $post_id");
+            $delete_reports_stmt = $mysqli->prepare("DELETE FROM post_reports WHERE post_id = ?");
+            $delete_reports_stmt->bind_param("i", $post_id);
+            $delete_reports_stmt->execute();
+            $delete_reports_stmt->close();
             error_log("Reports deleted");
             
             // Delete the post
-            $mysqli->query("DELETE FROM posts WHERE post_id = $post_id");
+            $delete_post_stmt = $mysqli->prepare("DELETE FROM posts WHERE post_id = ?");
+            $delete_post_stmt->bind_param("i", $post_id);
+            $delete_post_stmt->execute();
+            $delete_post_stmt->close();
             error_log("Post deleted");
             
             $mysqli->commit();
@@ -162,16 +162,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     
     try {
         // Delete files first
-        $mysqli->query("DELETE FROM files WHERE post_id = $post_id");
+        $delete_files_stmt = $mysqli->prepare("DELETE FROM files WHERE post_id = ?");
+        $delete_files_stmt->bind_param("i", $post_id);
+        $delete_files_stmt->execute();
+        $delete_files_stmt->close();
         
         // Delete comments
-        $mysqli->query("DELETE FROM comments WHERE post_id = $post_id");
+        $delete_comments_stmt = $mysqli->prepare("DELETE FROM comments WHERE post_id = ?");
+        $delete_comments_stmt->bind_param("i", $post_id);
+        $delete_comments_stmt->execute();
+        $delete_comments_stmt->close();
         
         // Delete reports
-        $mysqli->query("DELETE FROM post_reports WHERE post_id = $post_id");
+        $delete_reports_stmt = $mysqli->prepare("DELETE FROM post_reports WHERE post_id = ?");
+        $delete_reports_stmt->bind_param("i", $post_id);
+        $delete_reports_stmt->execute();
+        $delete_reports_stmt->close();
         
         // Delete the post
-        $mysqli->query("DELETE FROM posts WHERE post_id = $post_id");
+        $delete_post_stmt = $mysqli->prepare("DELETE FROM posts WHERE post_id = ?");
+        $delete_post_stmt->bind_param("i", $post_id);
+        $delete_post_stmt->execute();
+        $delete_post_stmt->close();
         
         $mysqli->commit();
         $_SESSION['success_message'] = "Post has been deleted successfully.";
@@ -419,18 +431,12 @@ $reports = $stmt->get_result();
     }
 
     function handleAction(reportId, action) {
-        console.log('handleAction called with:', { reportId, action });
-        
         if (action === 'resolve' && !confirm('Are you sure you want to dismiss this report?')) {
-            console.log('User cancelled dismiss action');
             return;
         }
         if (action === 'delete_post' && !confirm('Are you sure you want to delete this post and all its reports? This action cannot be undone.')) {
-            console.log('User cancelled delete action');
             return;
         }
-
-        console.log('Creating form for action:', action);
         
         // Create and submit form programmatically
         const form = document.createElement('form');
@@ -451,23 +457,15 @@ $reports = $stmt->get_result();
         form.appendChild(actionInput);
         document.body.appendChild(form);
         
-        console.log('Submitting form with data:', {
-            report_id: reportId,
-            action: action
-        });
-        
         form.submit();
     }
 
     // Add error handling for form submissions
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Page loaded, initializing form handlers');
-        
         // Add error handling for all forms
         document.querySelectorAll('form').forEach(form => {
             form.addEventListener('submit', function(e) {
-                console.log('Form submitted:', this);
-                console.log('Form data:', new FormData(this));
+                // Form submission handling
             });
         });
     });

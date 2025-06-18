@@ -10,7 +10,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         switch ($_POST['action']) {
             case 'delete':
                 // Delete community
-                $mysqli->query("DELETE FROM communities WHERE community_id = $community_id");
+                $delete_stmt = $mysqli->prepare("DELETE FROM communities WHERE community_id = ?");
+                $delete_stmt->bind_param("i", $community_id);
+                $delete_stmt->execute();
+                $delete_stmt->close();
                 $_SESSION['success_message'] = "Community deleted successfully!";
                 break;
                 
@@ -18,7 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Toggle privacy
                 $is_private = (int)$_POST['is_private'];
                 $new_status = $is_private ? 0 : 1;
-                $mysqli->query("UPDATE communities SET is_private = $new_status WHERE community_id = $community_id");
+                $update_stmt = $mysqli->prepare("UPDATE communities SET is_private = ? WHERE community_id = ?");
+                $update_stmt->bind_param("ii", $new_status, $community_id);
+                $update_stmt->execute();
+                $update_stmt->close();
                 $_SESSION['success_message'] = "Community privacy updated successfully!";
                 break;
         }

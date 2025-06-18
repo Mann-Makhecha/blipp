@@ -7,14 +7,14 @@
  * @return mixed The setting value or default value
  */
 function get_setting($key, $default = null) {
-    global $mysqli;
+    global $conn;
     
     static $settings = null;
     
     // Load all settings if not already loaded
     if ($settings === null) {
         $settings = [];
-        $result = $mysqli->query("SELECT setting_key, setting_value FROM admin_settings");
+        $result = $conn->query("SELECT setting_key, setting_value FROM admin_settings");
         while ($row = $result->fetch_assoc()) {
             $settings[$row['setting_key']] = $row['setting_value'];
         }
@@ -38,8 +38,8 @@ function is_registration_allowed() {
  * @return bool True if email verification is required
  */
 function is_email_verification_required() {
-    global $mysqli;
-    $result = $mysqli->query("SELECT setting_value FROM admin_settings WHERE setting_key = 'require_email_verification'");
+    global $conn;
+    $result = $conn->query("SELECT setting_value FROM admin_settings WHERE setting_key = 'require_email_verification'");
     if ($result && $row = $result->fetch_assoc()) {
         return $row['setting_value'] === '1';
     }
@@ -77,8 +77,8 @@ function is_file_type_allowed($extension) {
 }
 
 function get_community_creation_points() {
-    global $mysqli;
-    $result = $mysqli->query("SELECT setting_value FROM admin_settings WHERE setting_key = 'community_creation_points'");
+    global $conn;
+    $result = $conn->query("SELECT setting_value FROM admin_settings WHERE setting_key = 'community_creation_points'");
     if ($row = $result->fetch_assoc()) {
         return (int)$row['setting_value'];
     }
@@ -86,8 +86,8 @@ function get_community_creation_points() {
 }
 
 function get_user_points($user_id) {
-    global $mysqli;
-    $stmt = $mysqli->prepare("SELECT points FROM users WHERE user_id = ?");
+    global $conn;
+    $stmt = $conn->prepare("SELECT points FROM users WHERE user_id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -98,13 +98,13 @@ function get_user_points($user_id) {
 }
 
 function can_create_community($user_id) {
-    global $mysqli;
+    global $conn;
     
     // Get required points from settings
     $required_points = get_community_creation_points();
     
     // Get user's current points
-    $stmt = $mysqli->prepare("SELECT points FROM users WHERE user_id = ?");
+    $stmt = $conn->prepare("SELECT points FROM users WHERE user_id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();

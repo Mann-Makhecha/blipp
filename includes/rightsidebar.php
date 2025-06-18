@@ -498,7 +498,7 @@ function clearSearch() {
 // Show trend options (placeholder for future functionality)
 function showTrendOptions(hashtag) {
     // This could open a modal or dropdown with options like "Not interested", "Follow topic", etc.
-    console.log('Trend options for:', hashtag);
+    // Placeholder for future functionality
 }
 
 // Refresh sidebar content periodically
