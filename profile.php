@@ -599,18 +599,86 @@ if ($user_id && $user_id != $profile_user_id) {
         }
 
         .badges-card img {
-            width: 50px;
-            height: 50px;
-            margin-right: 1rem;
+            width: 40px;
+            height: 40px;
+            margin-right: 0.75rem;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid var(--border-primary);
+        }
+
+        .badge-item {
+            display: flex;
+            align-items: center;
+            background: var(--background-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .badge-item:hover {
+            background: rgba(29, 155, 240, 0.1);
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .badge-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .badge-info {
+            flex: 1;
+        }
+
+        .badge-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .badge-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .badge-icon-small {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            color: white;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .badge-icon-small:hover {
+            transform: scale(1.1);
+            background: var(--accent-primary-hover);
         }
 
         .communities-card ul, .badges-card ul {
             list-style: none;
             padding: 0;
+            margin: 0;
         }
 
         .communities-card li, .badges-card li {
-            padding: 0.5rem 0;
+            padding: 0;
         }
 
         .communities-card a {
@@ -715,11 +783,29 @@ if ($user_id && $user_id != $profile_user_id) {
                             <h2 class="mb-0">
                                 @<?= htmlspecialchars($user['username']) ?>
                                 <?php if (!empty($badges)): ?>
-                                    <?php foreach ($badges as $badge): ?>
-                                        <?php if ($badge['name'] === 'Verified'): ?>
-                                            <i class="fas fa-check-circle text-primary ms-2" title="Verified Account" style="font-size: 1.2rem;"></i>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
+                                    <div class="d-inline-flex align-items-center ms-2">
+                                        <?php foreach ($badges as $badge): ?>
+                                            <?php if (in_array(strtolower($badge['name']), ['verified', 'premium', 'moderator'])): ?>
+                                                <span class="badge-icon-small me-1" title="<?= htmlspecialchars($badge['name']) ?>">
+                                                    <?php
+                                                    $icon = 'fa-medal';
+                                                    switch (strtolower($badge['name'])) {
+                                                        case 'verified':
+                                                            $icon = 'fa-check-circle';
+                                                            break;
+                                                        case 'premium':
+                                                            $icon = 'fa-crown';
+                                                            break;
+                                                        case 'moderator':
+                                                            $icon = 'fa-shield-alt';
+                                                            break;
+                                                    }
+                                                    ?>
+                                                    <i class="fas <?= $icon ?>"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    </div>
                                 <?php endif; ?>
                             </h2>
                             <?php if ($user['name']): ?>
@@ -817,16 +903,51 @@ if ($user_id && $user_id != $profile_user_id) {
                 <div class="badges-card">
                     <h3>Badges</h3>
                     <?php if (!empty($badges)): ?>
-                        <ul class="d-flex flex-wrap gap-3">
+                        <ul>
                             <?php foreach ($badges as $badge): ?>
-                                <li class="d-flex align-items-center" title="<?= htmlspecialchars($badge['description']) ?>">
-                                    <img src="<?= htmlspecialchars($badge['image_path']) ?>" alt="<?= htmlspecialchars($badge['name']) ?>">
-                                    <span><?= htmlspecialchars($badge['name']) ?></span>
+                                <li class="badge-item">
+                                    <?php if ($badge['image_path'] && file_exists($badge['image_path'])): ?>
+                                        <img src="<?= htmlspecialchars($badge['image_path']) ?>" alt="<?= htmlspecialchars($badge['name']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <?php endif; ?>
+                                    <div class="badge-icon" style="<?= ($badge['image_path'] && file_exists($badge['image_path'])) ? 'display: none;' : 'display: flex;' ?>">
+                                        <?php
+                                        // Default icon based on badge name
+                                        $icon = 'fa-medal';
+                                        switch (strtolower($badge['name'])) {
+                                            case 'verified':
+                                                $icon = 'fa-check-circle';
+                                                break;
+                                            case 'premium':
+                                                $icon = 'fa-crown';
+                                                break;
+                                            case 'moderator':
+                                                $icon = 'fa-shield-alt';
+                                                break;
+                                            case 'contributor':
+                                                $icon = 'fa-star';
+                                                break;
+                                            case 'early adopter':
+                                                $icon = 'fa-rocket';
+                                                break;
+                                            default:
+                                                $icon = 'fa-medal';
+                                        }
+                                        ?>
+                                        <i class="fas <?= $icon ?>"></i>
+                                    </div>
+                                    <div class="badge-info">
+                                        <div class="badge-name"><?= htmlspecialchars($badge['name']) ?></div>
+                                        <p class="badge-description"><?= htmlspecialchars($badge['description']) ?></p>
+                                    </div>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
                     <?php else: ?>
-                        <p class="text-white">No badges earned yet.</p>
+                        <div class="text-center py-4">
+                            <i class="fas fa-medal text-secondary mb-3" style="font-size: 3rem;"></i>
+                            <p class="text-secondary mb-0">No badges earned yet.</p>
+                            <small class="text-muted">Complete achievements to earn badges!</small>
+                        </div>
                     <?php endif; ?>
                 </div>
 
@@ -1048,6 +1169,32 @@ if ($user_id && $user_id != $profile_user_id) {
             bioTextarea.addEventListener('input', updateCharCount);
             updateCharCount.call(bioTextarea);
         }
+
+        // Badge image fallback handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const badgeImages = document.querySelectorAll('.badge-item img');
+            badgeImages.forEach(img => {
+                img.addEventListener('error', function() {
+                    // Hide the broken image
+                    this.style.display = 'none';
+                    
+                    // Show the fallback icon
+                    const fallbackIcon = this.nextElementSibling;
+                    if (fallbackIcon && fallbackIcon.classList.contains('badge-icon')) {
+                        fallbackIcon.style.display = 'flex';
+                    }
+                });
+
+                // Check if image loads successfully
+                img.addEventListener('load', function() {
+                    // Hide the fallback icon if image loads successfully
+                    const fallbackIcon = this.nextElementSibling;
+                    if (fallbackIcon && fallbackIcon.classList.contains('badge-icon')) {
+                        fallbackIcon.style.display = 'none';
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
