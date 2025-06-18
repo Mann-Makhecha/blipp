@@ -112,66 +112,7 @@ if ($user_id && $conn && empty($search_query)) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="icon" href="favicon (2).png" type="image/x-icon">
-
-    <style>
-        body {
-            background-color: #000;
-            color: #fff;
-        }
-        .search-bar .form-control {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            color: #fff;
-        }
-        .search-bar .form-control::placeholder {
-            color: #666;
-        }
-        .search-bar .form-control:focus {
-            background-color: #1a1a1a;
-            border-color: #1d9bf0;
-            box-shadow: 0 0 0 0.25rem rgba(29, 155, 240, 0.25);
-            color: #fff;
-        }
-        .search-bar .btn {
-            background-color: #1d9bf0;
-            border-color: #1d9bf0;
-        }
-        .search-bar .btn:hover {
-            background-color: #1a8cd8;
-            border-color: #1a8cd8;
-        }
-        .nav-tabs .nav-link {
-            color: #fff;
-            border: none;
-        }
-        .nav-tabs .nav-link.active {
-            color: #1d9bf0;
-            border-bottom: 2px solid #1d9bf0;
-        }
-        .user-card, .post-card, .community-card {
-            border-bottom: 1px solid #333;
-            transition: background-color 0.2s;
-        }
-        .user-card:hover, .post-card:hover, .community-card:hover {
-            background-color: #111;
-        }
-        .user-card .btn-outline-primary {
-            border-color: #1d9bf0;
-            color: #1d9bf0;
-            font-size: 0.8rem;
-            padding: 2px 10px;
-        }
-        .user-card .btn-outline-primary:hover {
-            background-color: #1d9bf0;
-            color: #fff;
-        }
-        @media (max-width: 767px) {
-            body {
-                padding-bottom: 60px; /* Match sidebar.php's padding for bottom nav */
-            }
-        }
-
-    </style>
+    <link rel="stylesheet" href="css/explore.css">
 </head>
 <body>
     <div class="container-fluid">
